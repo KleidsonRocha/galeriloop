@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     minWidth: width * 0.8, // 80% da largura da tela
-    minHeight: height * 0.3, // 30% da altura da tela
+    minHeight: height * 0.8, // 30% da altura da tela
     maxWidth: 450, // Maximo 450px para telas maiores, como no seu CSS
     justifyContent: 'center',
   },
