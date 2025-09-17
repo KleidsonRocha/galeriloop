@@ -1520,7 +1520,7 @@ const styles = StyleSheet.create({
     gap: SPACING.medium,
   },
   imageCard: {
-    width: '48%',
+    width: '45%',
     backgroundColor: COLORS.cardBackground,
     borderRadius: BORDER_RADIUS.medium,
     overflow: 'hidden',
@@ -1540,7 +1540,7 @@ const styles = StyleSheet.create({
     height: 180,
   },
   imageInfo: {
-    padding: SPACING.small,
+    padding: SPACING.medium,
   },
   imageName: {
     fontSize: 14,

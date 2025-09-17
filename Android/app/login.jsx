@@ -399,6 +399,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     fontWeight: 'bold',
+    width:100,
   },
   confirmationMessage: {
     marginTop: 20,

@@ -263,7 +263,7 @@ const Home = () => {
   const onHandlerStateChange = (event) => {
     if (event.nativeEvent.state === RNGHState.END) {
       const { translationX, velocityX } = event.nativeEvent;
-      
+
       if (Math.abs(velocityX) > 500 || Math.abs(translationX) > 100) {
         if (translationX > 0) {
           scrollLeft();
@@ -305,7 +305,7 @@ const Home = () => {
     const screenWidth = Dimensions.get('window').width;
     const cardWidth = isMobile ? screenWidth * 0.8 : 240;
     const spacing = isMobile ? 20 : 30;
-    
+
     const baseStyle = {
       position: 'absolute',
       width: cardWidth,
@@ -326,7 +326,7 @@ const Home = () => {
       baseStyle.transform.push({ translateX: cardWidth + spacing });
       baseStyle.opacity = 0.5;
     }
-    
+
     return baseStyle;
   };
 
@@ -363,11 +363,11 @@ const Home = () => {
             <View style={[styles.sidebar, isMobile && styles.sidebarMobile]}>
               <View style={styles.sidebarHeader}>
                 <TouchableOpacity
-                  style={styles.plusIcon}
+                  style={styles.plusIconTouchable} // Estilo para o círculo e alinhamento
                   onPress={() => setModalAlbumOpen(true)}
                   accessibilityLabel="Adicionar novo álbum"
                 >
-                  <AntDesign name="pluscircleo" size={30} color="white" />
+                  <Text style={styles.plusSign}>+</Text>
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.sidebarContent}>
@@ -631,6 +631,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+    plusIconTouchable: {
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: 'transparent', 
+    borderWidth: 2,
+    borderColor: 'white', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+  },
+  plusSign: {
+    color: 'white',
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    lineHeight: 24, 
+  },
   sidebarContent: {
     flex: 1,
     padding: 20,
@@ -859,10 +875,11 @@ const styles = StyleSheet.create({
   modalForm: {
     width: '100%',
     alignItems: 'center',
-    padding: 15,
+    // padding: 15, // Removido
+    paddingHorizontal: 18, // Adicionado para manter o espaçamento consistente
   },
   modalInput: {
-    width: '100%',
+    width: '250',
     paddingVertical: 14,
     paddingHorizontal: 18,
     borderRadius: 8,
@@ -895,7 +912,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginBottom: 18,
-    paddingHorizontal: 5,
+    // paddingHorizontal: 5, // Removido
   },
   modalLabel: {
     fontSize: 16,
@@ -909,7 +926,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
     alignSelf: 'flex-start',
-    paddingLeft: 5,
+    // paddingLeft: 5, // Removido
   },
   modalSelect: {
     flex: 1,
@@ -952,4 +969,3 @@ const styles = StyleSheet.create({
 });
 
 export default Home;
-
