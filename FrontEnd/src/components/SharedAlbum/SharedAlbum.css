@@ -1,3 +1,200 @@
+/* Modal de pagamento */
+.payment-modal-content {
+  text-align: center;
+  padding: 24px;
+}
+.payment-modal-options {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin: 24px 0;
+}
+.payment-modal-btn {
+  min-width: 120px;
+}
+.payment-modal-cancel {
+  margin-top: 12px;
+}
+
+/* Modal de escolha de mídia */
+.media-choice-modal-fixedheight {
+  height: 15rem;
+}
+
+/* Modal Pix */
+.pix-modal-content {
+  text-align: center;
+  padding: 32px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.pix-modal-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e3653;
+  margin-bottom: 18px;
+}
+.pix-modal-error {
+  color: red;
+}
+.pix-modal-copiacola {
+  word-break: break-all;
+  font-size: 13px;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+.pix-modal-copiacola-key {
+  user-select: all;
+  font-family: monospace;
+  font-size: 14px;
+}
+.pix-modal-copy-btn {
+  margin-bottom: 12px;
+  padding: 6px 18px;
+  border-radius: 6px;
+  border: 1px solid #1e3653;
+  background: #f3f6fa;
+  color: #1e3653;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.2s;
+}
+.pix-modal-copy-btn:hover {
+  background: #e3eaf5;
+}
+.pix-timer-warning {
+  color: #e0195a;
+  margin-top: 8px;
+  font-size: 13px;
+}
+.modal-btn-margin {
+  margin-top: 16px;
+}
+
+/* Modal de resumo do orçamento */
+.summary-modal-content {
+  padding: 32px 16px;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+  border-radius: 16px;
+  background: #fff;
+  box-sizing: border-box;
+  box-shadow: 0 2px 16px rgba(30,54,83,0.08);
+  position: relative;
+}
+.summary-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.summary-modal-title {
+  color: #1e3653;
+  text-align: center;
+  flex: 1;
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.summary-modal-title.error {
+  color: #e0195a;
+}
+.summary-modal-message {
+  margin-bottom: 18px;
+  color: #1e3653;
+  text-align: center;
+  font-size: 17px;
+}
+.summary-modal-message.error {
+  color: #e0195a;
+}
+.summary-modal-items {
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 18px;
+  background: #fafbfc;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.summary-modal-empty {
+  color: #888;
+  text-align: center;
+}
+.summary-modal-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+}
+.summary-modal-item.with-border {
+  border-bottom: 1px solid #eee;
+}
+.summary-modal-imgbox {
+  width: 60px;
+  height: 60px;
+  margin-right: 16px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f3f3f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.summary-modal-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.summary-modal-iteminfo {
+  flex: 1;
+  min-width: 0;
+}
+.summary-modal-itemname {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1e3653;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.summary-modal-itemtype {
+  font-size: 13px;
+  color: #555;
+}
+.summary-modal-itemqty {
+  font-size: 13px;
+  color: #555;
+  margin: 0 12px;
+  min-width: 48px;
+  text-align: center;
+}
+.summary-modal-itemprice {
+  font-weight: 700;
+  color: #1e3653;
+  min-width: 80px;
+  text-align: right;
+}
+.summary-modal-total {
+  text-align: right;
+  margin-top: 14px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #1e3653;
+}
+.summary-modal-footer {
+  display: flex;
+  justify-content: center;
+}
+.summary-modal-close-btn {
+  margin-top: 8px;
+  min-width: 120px;
+}
 /* Global Styles */
 body {
   margin: 0;
@@ -497,7 +694,7 @@ footer, .footer {
   margin: 0;
 }
 .cart-item-qty input[type=number] {
-  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .cart-item-qty input {
@@ -783,4 +980,9 @@ footer, .footer {
   white-space: nowrap;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
   user-select: none;
+}
+
+.shared-album-modal-close-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

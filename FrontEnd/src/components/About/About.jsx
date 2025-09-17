@@ -37,7 +37,7 @@ const About = () => {
           </div>
         </section>
       </main>
-      <Footer /> {/* Use Footer component */}
+      <Footer />
     </div>
   );
 };

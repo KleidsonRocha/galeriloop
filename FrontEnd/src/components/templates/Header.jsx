@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ContactModal from './ContactModal';
 import logo from '../../assets/logo.svg';
 import { IoPersonSharp } from "react-icons/io5";
 const VITE_API_URL = import.meta.env.VITE_API_URL;
@@ -33,6 +34,7 @@ const Header = () => {
   const [isAuth, setIsAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -69,10 +71,11 @@ const Header = () => {
       )}
       {!isAuth && (
         <nav className="header-nav">
-          <a href="/about" className="nav-link">Fale Conosco</a>
+          <button className="nav-link" style={{background:'none',border:'none',padding:0,cursor:'pointer'}} onClick={() => setContactModalOpen(true)}>Fale Conosco</button>
           <a href="/" className="nav-link">Login</a>
         </nav>
       )}
+      <ContactModal isOpen={contactModalOpen} onClose={() => setContactModalOpen(false)} />
     </header>
   );
 };

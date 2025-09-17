@@ -35,6 +35,7 @@ const SharedAlbum = () => {
   const [contactTouched, setContactTouched] = useState(false);
   const [securityEnabled, setSecurityEnabled] = useState(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [sendingBudget, setSendingBudget] = useState(false);
   const [paymentType, setPaymentType] = useState(null); // 'pix' ou 'presencial'
   const [pixTimer, setPixTimer] = useState(0); // segundos restantes para liberar orçamento
   const imageRefs = useRef({});
@@ -332,81 +333,83 @@ const SharedAlbum = () => {
   };
 
   const handleSendBudget = async () => {
-    if (paymentType === 'pix' && pixTimer > 0) {
-      return;
+  if (paymentType === 'pix' && pixTimer > 0) {
+    return;
+  }
+  if (!contactInfo || !albumData) return;
+  setSendingBudget(true); // <-- Ativa loading
+  const itemsResumo = cart.map((item) => ({
+    id: item.id,
+    nome: item.nome,
+    tipo_midia: item.tipo_midia,
+    quantidade: item.qty,
+    preco_unitario: item.preco,
+  }));
+  const totalResumo = getTotal();
+  const paymentTypeToSend = paymentType || 'presencial';
+  try {
+    const payload = {
+      cliente: {
+        nome: contactInfo.nome,
+        email: contactInfo.email,
+      },
+      itens: itemsResumo,
+      total: totalResumo,
+      albumId: albumData.dados.id,
+      subalbumId: albumData.dados.tipo === 'subalbum' ? albumData.dados.id : null,
+      paymentType: paymentTypeToSend,
+    };
+
+    const response = await fetch(`${VITE_API_URL}/orcamentos/enviar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro ao enviar orçamento");
     }
-    if (!contactInfo || !albumData) return;
-    const itemsResumo = cart.map((item) => ({
-      id: item.id,
-      nome: item.nome,
-      tipo_midia: item.tipo_midia,
-      quantidade: item.qty,
-      preco_unitario: item.preco,
-    }));
-    const totalResumo = getTotal();
-    // Garante que paymentType nunca será null
-    const paymentTypeToSend = paymentType || 'presencial';
-    try {
-      const payload = {
-        cliente: {
-          nome: contactInfo.nome,
-          email: contactInfo.email,
-        },
-        itens: itemsResumo,
-        total: totalResumo,
-        albumId: albumData.dados.id,
-        subalbumId: albumData.dados.tipo === 'subalbum' ? albumData.dados.id : null, // Ajuste para subálbum
-        paymentType: paymentTypeToSend,
-      };
 
-      const response = await fetch(`${VITE_API_URL}/orcamentos/enviar`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+    setCart([]);
+    setSummaryModalContent({
+      success: true,
+      message: `Orçamento enviado para o e-mail ${contactInfo.email}! Em breve você receberá o retorno do fotógrafo.`,
+      items: itemsResumo,
+      total: totalResumo,
+    });
+    setSummaryModalOpen(true);
+    setPaymentType(null);
+    setPixTimer(0);
+  } catch (error) {
+    setSummaryModalContent({
+      success: false,
+      message: "Erro ao enviar orçamento. Por favor, tente novamente.",
+      items: itemsResumo,
+      total: totalResumo,
+    });
+    setSummaryModalOpen(true);
+    console.error("Erro:", error);
+  } finally {
+    setSendingBudget(false); // <-- Desativa loading ao finalizar
+  }
+};
 
-      if (!response.ok) {
-        throw new Error("Erro ao enviar orçamento");
-      }
-
-      setCart([]);
-      setSummaryModalContent({
-        success: true,
-        message: `Orçamento enviado para o e-mail ${contactInfo.email}! Em breve você receberá o retorno do fotógrafo.`,
-        items: itemsResumo,
-        total: totalResumo,
-      });
-      setSummaryModalOpen(true);
-      setPaymentType(null);
-      setPixTimer(0);
-    } catch (error) {
-      setSummaryModalContent({
-        success: false,
-        message: "Erro ao enviar orçamento. Por favor, tente novamente.",
-        items: itemsResumo,
-        total: totalResumo,
-      });
-      setSummaryModalOpen(true);
-      console.error("Erro:", error);
-    }
-  };
-
-  const handleSelectPayment = async (type) => {
-    setPaymentType(type);
-    setPaymentModalOpen(false);
-    if (type === 'pix') {
-      await handleShowPix();
-      setPixTimer(10); // 10 segundos para evitar cliques automáticos
-    } else {
-      setPixTimer(0);
-      // Envia orçamento automaticamente para presencial
-      setTimeout(() => {
-        handleSendBudget();
-      }, 15); // pequeno delay para fechar modal antes de enviar
-    }
-  };
+const handleSelectPayment = async (type) => {
+  setPaymentType(type);
+  setPaymentModalOpen(false);
+  if (type === 'pix') {
+    await handleShowPix();
+    setPixTimer(10);
+  } else {
+    setPixTimer(0);
+    setSendingBudget(true); // <-- Ativa loading para presencial
+    setTimeout(() => {
+      handleSendBudget();
+    });
+  }
+};
 
   // Modal de escolha de pagamento
   const handleOpenPaymentModal = () => {
@@ -507,7 +510,6 @@ const SharedAlbum = () => {
                     >
                       <div
                         className="shared-album-img-wrapper"
-                        style={{ position: "relative" }}
                       >
                         <div className="image-protection-overlay">
                           <span className="protection-text">Protegido</span>
@@ -519,7 +521,7 @@ const SharedAlbum = () => {
                           loading="lazy"
                           className="album-image shared-album-img-hover"
                           onClick={() => handleOpenModal(foto)}
-                          style={{ cursor: "pointer", userSelect: "none" }}
+                          style={{ cursor: "pointer" }}
                           onContextMenu={preventContextMenu}
                           draggable="false"
                           onLoad={(e) =>
@@ -678,38 +680,36 @@ const SharedAlbum = () => {
                 Total: <b>R$ {getTotal()}</b>
               </div>
               <button
-                className="cart-send-btn"
-                onClick={handleOpenPaymentModal}
-                disabled={cart.length === 0}
-              >
-                Mandar orçamento
-              </button>
+  className="cart-send-btn"
+  onClick={handleOpenPaymentModal}
+  disabled={cart.length === 0 || sendingBudget}
+>
+  Mandar orçamento
+</button>
               {paymentType === 'pix' && pixTimer > 0 && (
-                <div style={{ color: '#e0195a', marginTop: 8, fontSize: 13 }}>
+                <div className="pix-timer-warning">
                   Aguarde {Math.floor(pixTimer / 60)}:{(pixTimer % 60).toString().padStart(2, '0')} para fechar o QR Code Pix.
                 </div>
               )}
               {/* Modal de escolha de pagamento */}
               <Modal isOpen={paymentModalOpen} onClose={() => setPaymentModalOpen(false)}>
-                <div style={{ textAlign: 'center', padding: 24 }}>
+                <div className="payment-modal-content">
                   <h2>Como deseja pagar?</h2>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 24, margin: '24px 0' }}>
+                  <div className="payment-modal-options">
                     <button
-                      className="media-choice-btn"
+                      className="media-choice-btn payment-modal-btn"
                       onClick={() => handleSelectPayment('pix')}
-                      style={{ minWidth: 120 }}
                     >
                       Pix
                     </button>
                     <button
-                      className="media-choice-btn"
+                      className="media-choice-btn payment-modal-btn"
                       onClick={() => handleSelectPayment('presencial')}
-                      style={{ minWidth: 120 }}
                     >
                       Presencial
                     </button>
                   </div>
-                  <button className="shared-album-modal-close-btn" onClick={() => setPaymentModalOpen(false)}>
+                  <button className="shared-album-modal-close-btn payment-modal-cancel" onClick={() => setPaymentModalOpen(false)}>
                     Cancelar
                   </button>
                 </div>
@@ -836,21 +836,21 @@ const SharedAlbum = () => {
           handleSendBudget();
         }, 300);
       }}>
-        <div style={{ textAlign: 'center', padding: 32, maxWidth: 420, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 24, fontWeight: 700, color: '#1e3653', marginBottom: 18 }}>Pagamento via Pix</h2>
+        <div className="pix-modal-content">
+          <h2 className="pix-modal-title">Pagamento via Pix</h2>
           {pixLoading ? (
             <p>Gerando QR Code...</p>
           ) : pixError ? (
-            <p style={{ color: 'red' }}>{pixError}</p>
+            <p className="pix-modal-error">{pixError}</p>
           ) : pixPayload ? (
             <>
               <QRCodeSVG value={pixPayload} size={220} />
-              <p style={{ wordBreak: 'break-all', fontSize: 13, marginTop: 16, marginBottom: 8 }}>
+              <p className="pix-modal-copiacola">
                 <b>Copia e Cola:</b><br />
-                <span style={{ userSelect: 'all', fontFamily: 'monospace', fontSize: 14 }}>{pixPayload}</span>
+                <span className="pix-modal-copiacola-key">{pixPayload}</span>
               </p>
               <button
-                style={{ marginBottom: 12, padding: '6px 18px', borderRadius: 6, border: '1px solid #1e3653', background: '#f3f6fa', color: '#1e3653', fontWeight: 600, cursor: 'pointer', fontSize: 15 }}
+                className="pix-modal-copy-btn"
                 onClick={() => {
                   navigator.clipboard.writeText(pixPayload);
                 }}
@@ -858,98 +858,74 @@ const SharedAlbum = () => {
                 Copiar chave Pix
               </button>
               {pixTimer > 0 && (
-                <div style={{ color: '#e0195a', marginTop: 8, fontSize: 13 }}>
+                <div className="pix-timer-warning">
                   Aguarde {Math.floor(pixTimer / 60)}:{(pixTimer % 60).toString().padStart(2, '0')} para fechar esta tela.
                 </div>
               )}
             </>
           ) : null}
-          <button className="shared-album-modal-close-btn" onClick={() => {
-            if (pixTimer === 0) {
-              setPixModalOpen(false);
-              setTimeout(() => {
-                handleSendBudget();
-              }, 300);
-            }
-          }} disabled={pixTimer > 0} style={{ marginTop: 16 }}>
-            Fechar
-          </button>
+          <button className="shared-album-modal-close-btn modal-btn-margin" onClick={() => {
+  if (pixTimer === 0) {
+    setPixModalOpen(false);
+    setSendingBudget(true); // <-- Ativa loading para Pix
+    setTimeout(() => {
+      handleSendBudget();
+    }, 300);
+  }
+}} disabled={pixTimer > 0}>
+  Fechar
+</button>
         </div>
       </Modal>
       {/* Modal de resumo do orçamento */}
-      <Modal isOpen={summaryModalOpen} onClose={() => setSummaryModalOpen(false)}>
-        <div
-          style={{
-            padding: '32px 16px',
-            maxWidth: 600,
-            width: '100%',
-            margin: '0 auto',
-            borderRadius: 16,
-            background: '#fff',
-            boxSizing: 'border-box',
-            boxShadow: '0 2px 16px rgba(30,54,83,0.08)',
-            position: 'relative',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-            <h2 style={{
-              color: summaryModalContent.success ? '#1e3653' : '#e0195a',
-              textAlign: 'center',
-              flex: 1,
-              margin: 0,
-              fontSize: 26,
-              fontWeight: 700,
-              letterSpacing: 0.5,
-            }}>
+      <Modal isOpen={summaryModalOpen} onClose={() => {
+  setSummaryModalOpen(false);
+  setSendingBudget(false); // <-- Libera botão ao fechar resumo
+}}>
+        <div className="summary-modal-content">
+          <div className="summary-modal-header">
+            <h2 className={summaryModalContent.success ? "summary-modal-title" : "summary-modal-title error"}>
               {summaryModalContent.success ? 'Resumo do Orçamento' : 'Erro ao Enviar'}
             </h2>
             <button
               onClick={() => setSummaryModalOpen(false)}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: 26,
-                color: '#888',
-                cursor: 'pointer',
-                marginLeft: 8,
-                lineHeight: 1,
-              }}
+              className="custom-modal-close-icon"
               title="Fechar"
             >
-              ×
+              ✖
             </button>
           </div>
-          <div style={{ marginBottom: 18, color: summaryModalContent.success ? '#1e3653' : '#e0195a', textAlign: 'center', fontSize: 17 }}>
+          <div className={summaryModalContent.success ? "summary-modal-message" : "summary-modal-message error"}>
             {summaryModalContent.message}
           </div>
-          <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, marginBottom: 18, background: '#fafbfc', maxHeight: 320, overflowY: 'auto' }}>
+          <div className="summary-modal-items">
             {summaryModalContent.items.length === 0 ? (
-              <div style={{ color: '#888', textAlign: 'center' }}>Nenhum item no orçamento.</div>
+              <div className="summary-modal-empty">Nenhum item no orçamento.</div>
             ) : (
               summaryModalContent.items.map((item, idx) => (
-                <div key={item.id + '-' + item.tipo_midia} style={{ display: 'flex', alignItems: 'center', borderBottom: idx < summaryModalContent.items.length - 1 ? '1px solid #eee' : 'none', padding: '10px 0' }}>
-                  <div style={{ width: 60, height: 60, marginRight: 16, flexShrink: 0, borderRadius: 8, overflow: 'hidden', background: '#f3f3f3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div key={item.id + '-' + item.tipo_midia} className={"summary-modal-item" + (idx < summaryModalContent.items.length - 1 ? " with-border" : "") }>
+                  <div className="summary-modal-imgbox">
                     <img
                       src={getImageUrl(item)}
                       alt={item.nome}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
+                      className="summary-modal-img"
                     />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: '#1e3653', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.nome}</div>
-                    <div style={{ fontSize: 13, color: '#555' }}>{item.tipo_midia === 'fisica' ? 'Física' : 'Digital'}</div>
+                  <div className="summary-modal-iteminfo">
+                    <div className="summary-modal-itemname">{item.nome}</div>
+                    <div className="summary-modal-itemtype">{item.tipo_midia === 'fisica' ? 'Física' : 'Digital'}</div>
                   </div>
-                  <div style={{ fontSize: 13, color: '#555', margin: '0 12px', minWidth: 48, textAlign: 'center' }}>Qtd: {item.quantidade}</div>
-                  <div style={{ fontWeight: 700, color: '#1e3653', minWidth: 80, textAlign: 'right' }}>R\$ {(item.preco_unitario * item.quantidade).toFixed(2)}</div>
+                  <div className="summary-modal-itemqty">Qtd: {item.quantidade}</div>
+                  <div className="summary-modal-itemprice">R$ {(item.preco_unitario * item.quantidade).toFixed(2)}</div>
                 </div>
               ))
             )}
-            <div style={{ textAlign: 'right', marginTop: 14, fontWeight: 700, fontSize: 18, color: '#1e3653' }}>
-              Total: R\$ {Number(summaryModalContent.total).toFixed(2)}
+            <div className="summary-modal-total">
+              Total: R$ {Number(summaryModalContent.total).toFixed(2)}
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <button className="shared-album-modal-close-btn" onClick={() => setSummaryModalOpen(false)} style={{ marginTop: 8, minWidth: 120 }}>
+          <div className="summary-modal-footer">
+            <button className="shared-album-modal-close-btn summary-modal-close-btn" onClick={() => setSummaryModalOpen(false)}>
               Fechar
             </button>
           </div>

@@ -10,6 +10,7 @@ const usuarioRoute = require('./routes/usuarioRoute.js');
 const fotoRoute = require('./routes/fotosRoute.js');
 const albumRoute = require('./routes/albumRoute.js');
 const orcamentosRoutes = require('./routes/orcamentoRoute.js');
+const contatoRoute = require('./routes/contatoRoute.js');
 
 console.log("DB_HOST:", process.env.DB_HOST);
 console.log("DB_PORT:", process.env.DB_PORT);
@@ -50,10 +51,12 @@ app.use((req, res, next) => {
   next();
 });
 
+
 app.use('/usuarios', usuarioRoute);
 app.use('/fotos', fotoRoute);
 app.use('/album', albumRoute);
-app.use('/orcamentos', orcamentosRoutes); 
+app.use('/orcamentos', orcamentosRoutes);
+app.use('/contato', contatoRoute);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.listen(process.env.BE_PORT, () => {
