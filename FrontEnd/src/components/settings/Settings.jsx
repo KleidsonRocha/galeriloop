@@ -33,6 +33,10 @@ const Settings = () => {
   const [pixNome, setPixNome] = useState("");
   const [pixCidade, setPixCidade] = useState("");
   const [pixMsg, setPixMsg] = useState("");
+  const handleEmailChange = (e) => setEmail(e.target.value);
+  const handleSenhaAtualChange = (e) => setSenhaAtual(e.target.value);
+  const handleNovaSenhaChange = (e) => setNovaSenha(e.target.value);
+  const handleConfirmarNovaSenhaChange = (e) => setConfirmarNovaSenha(e.target.value);
 
   useEffect(() => {
     const fetchAnalises = async () => {
@@ -71,11 +75,6 @@ const Settings = () => {
     };
     fetchPix();
   }, []);
-
-  const handleEmailChange = (e) => setEmail(e.target.value);
-  const handleSenhaAtualChange = (e) => setSenhaAtual(e.target.value);
-  const handleNovaSenhaChange = (e) => setNovaSenha(e.target.value);
-  const handleConfirmarNovaSenhaChange = (e) => setConfirmarNovaSenha(e.target.value);
 
   const handleTamanhoFotosChange = (tamanho) => {
     setTamanhoFotos((prev) => ({
@@ -142,19 +141,19 @@ const Settings = () => {
 
   const expiracaoData = analises?.porExpiracao
     ? {
-        labels: analises.porExpiracao.map(e => e.data),
-        datasets: [
-          {
-            label: "Links expirando",
-            data: analises.porExpiracao.map(e => e.quantidade),
-            fill: false,
-            borderColor: 'rgba(75,192,192,1)',
-            pointRadius: 2,
-            pointHitRadius: 12,
-            tension: 0.3,
-          }
-        ]
-      }
+      labels: analises.porExpiracao.map(e => e.data),
+      datasets: [
+        {
+          label: "Links expirando",
+          data: analises.porExpiracao.map(e => e.quantidade),
+          fill: false,
+          borderColor: 'rgba(75,192,192,1)',
+          pointRadius: 2,
+          pointHitRadius: 12,
+          tension: 0.3,
+        }
+      ]
+    }
     : { labels: [], datasets: [] };
 
   const expiracaoOptions = {
@@ -329,58 +328,47 @@ const Settings = () => {
             {/* Bloco de PIX abaixo dos campos de email/senha */}
             <div
               className="pix-config-box"
-              style={{
-                border: "1px solid #ccc",
-                padding: 20,
-                marginTop: 32,
-                borderRadius: 10,
-                background: "#445e79ff"
-              }}
+
             >
               <h3 style={{ marginBottom: 16 }}>Dados do Pix</h3>
               <form onSubmit={handlePixSubmit}>
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: "block", marginBottom: 4 }}>Chave Pix:</label>
+                  <label className="container-right-form-label">Chave Pix:</label>
                   <input
-                    style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #bbb" }}
+                    className="container-right-form-input"
                     value={pixChave}
                     onChange={e => setPixChave(e.target.value)}
                     required
                   />
                 </div>
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: "block", marginBottom: 4 }}>Nome do recebedor:</label>
+                  <label className="container-right-form-label">Nome do recebedor:</label>
                   <input
-                    style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #bbb" }}
+                    className="container-right-form-input"
                     value={pixNome}
                     onChange={e => setPixNome(e.target.value)}
                     required
                   />
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", marginBottom: 4 }}>Cidade:</label>
+                  <label className="container-right-form-label">Cidade:</label>
                   <input
-                    style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #bbb" }}
+                    className="container-right-form-input"
                     value={pixCidade}
                     onChange={e => setPixCidade(e.target.value)}
                     required
                   />
                 </div>
-                <button
-                  type="submit"
-                  onClick={handlePixSubmit}
-                  style={{
-                    background: "#1976d2",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 4,
-                    padding: "10px 24px",
-                    fontWeight: 600,
-                    cursor: "pointer"
-                  }}
-                >
-                  Salvar Pix
-                </button>
+                <div className="container-right-content">
+
+                  <button
+                    type="submit"
+                    onClick={handlePixSubmit}
+                    className="botao-salvar-settings"
+                  >
+                    Salvar Pix
+                  </button>
+                </div>
                 {pixMsg && (
                   <div style={{
                     marginTop: 12,

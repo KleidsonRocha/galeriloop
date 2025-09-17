@@ -1,4 +1,43 @@
-/* --- Sidebar layout geral --- */
+/* --- Variáveis CSS para Cores e Propriedades Reutilizáveis --- */
+:root {
+  --primary-dark: #1e3653;
+  --secondary-light: #d9d9d9; 
+  --text-dark: #1e3653;
+  --text-medium: #666; 
+  --white: #ffffff;
+  --black: #000000; 
+
+  --border-radius-sm: 8px;
+  --border-radius-md: 12px;
+  --border-radius-lg: 20px;
+
+  --shadow-light: 0 4px 10px rgba(0, 0, 0, 0.1);
+  --shadow-medium: 0 8px 20px rgba(30, 54, 83, 0.2);
+  --shadow-heavy: 0 12px 30px rgba(30, 54, 83, 0.35);
+
+  --transition-speed-fast: 0.2s;
+  --transition-speed-normal: 0.3s;
+  --transition-speed-slow: 0.5s;
+
+  --font-family-inconsolata: "Inconsolata", monospace;
+}
+
+/* --- Base e Reset --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif; /* Fallback antes de Inconsolata para o título */
+  margin: 0;
+  padding: 0;
+  background-color: var(--secondary-light);
+  color: var(--text-dark);
+}
+
+/* --- Sidebar Layout --- */
 .sidebar {
   position: fixed;
   left: 1rem;
@@ -6,130 +45,200 @@
   width: 20%;
   max-width: 300px;
   height: 80vh;
-  background-color: #d9d9d9;
-  border-radius: 20px;
+  background-color: var(--white); /* Mais limpo que o cinza de fundo */
+  border-radius: var(--border-radius-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   z-index: 99;
+  box-shadow: var(--shadow-light); /* Adiciona profundidade */
+  transition: width var(--transition-speed-normal) ease;
 }
 
 .sidebar-header {
-  height: 3rem;
-  background-color: #1e3653;
-  border-radius: 20px 20px 0 0;
+  height: 3.5rem; /* Um pouco mais alto */
+  background-color: var(--primary-dark);
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding-right: 0.8rem;
+  padding-right: 1rem;
 }
 
 .plus-icon {
-  all: unset;
-  color: white;
+  background: none;
+  border: none;
+  color: var(--white);
   font-size: 2.5rem;
+  line-height: 1; /* Alinha o '+' verticalmente */
   cursor: pointer;
   font-weight: bold;
+  padding: 0 0.5rem; /* Adiciona um pouco de espaço para clique */
+  transition: transform var(--transition-speed-fast) ease-out;
+}
+
+.plus-icon:hover {
+  transform: scale(1.1);
 }
 
 .sidebar-content {
   flex: 1;
-  padding: 1rem;
+  padding: 1.2rem 1rem; /* Ajuste de padding */
   overflow-y: auto;
+  scrollbar-width: thin; /* Para Firefox */
+  scrollbar-color: var(--primary-dark) var(--secondary-light); /* Para Firefox */
 }
 
-/* ---- Conteúdo sidebar ---- */
+/* Custom scrollbar para Webkit browsers */
+.sidebar-content::-webkit-scrollbar {
+  width: 8px;
+}
+.sidebar-content::-webkit-scrollbar-track {
+  background: var(--secondary-light);
+  border-radius: 10px;
+}
+.sidebar-content::-webkit-scrollbar-thumb {
+  background-color: var(--primary-dark);
+  border-radius: 10px;
+  border: 2px solid var(--secondary-light);
+}
+
+/* ---- Conteúdo Sidebar ---- */
 .album-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 1rem; 
 }
+
 .album-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #1e3653;
+  font-size: 1.3rem; 
+  font-weight: 700;
+  color: var(--text-dark);
 }
+
 .clients-list {
-  margin-top: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.8rem; /* Ajuste do espaçamento */
 }
+
 .client-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-.client-item button {
-  all: unset;
-  cursor: pointer;
-  font-size: 1.2rem;
-  color: inherit;
-}
-.client-name {
-  font-size: 1rem;
-  color: #1e3653;
-  text-decoration: none;
+  padding: 0.6rem 0.5rem; /* Adiciona um pouco de padding */
+  border-radius: var(--border-radius-sm);
+  transition: background-color var(--transition-speed-fast) ease;
 }
 
-/* ---- Main Layout ---- */
+.client-item:hover {
+  background-color: rgba(30, 54, 83, 0.05); /* Leve destaque ao passar o mouse */
+}
+
+.client-item button {
+  all: unset; /* Mantém o reset */
+  cursor: pointer;
+  font-size: 1.3rem; /* Ícones um pouco maiores */
+  color: var(--text-medium); /* Cor padrão dos ícones */
+  display: flex; /* Para centralizar ícones */
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+  transition: color var(--transition-speed-fast) ease;
+}
+
+.client-item button:hover {
+  color: var(--primary-dark); /* Cor ao passar o mouse */
+}
+
+.client-name {
+  font-size: 1.05rem; /* Levemente maior */
+  color: var(--text-dark);
+  text-decoration: none;
+  font-weight: 500;
+  flex-grow: 1; /* Permite que o nome ocupe mais espaço */
+  padding-right: 0.5rem;
+}
+
+.client-name:hover {
+  text-decoration: underline;
+}
+
+
 .main {
-  margin-left: 23%;
-  padding: 6rem 1rem 1rem 1rem;
+  margin-left: 23%; 
+  padding: 6rem 1.5rem 2rem 1.5rem; 
   min-height: 100vh;
-  transition: margin 0.3s ease;
+  transition: margin var(--transition-speed-normal) ease;
 }
 
 .main-title {
-  font-size: 2.5rem;
-  color: #1e3653;
+  font-size: 2.8rem; 
+  color: var(--primary-dark);
   text-align: center;
-  margin-bottom: 2rem;
-  font-family: "Inconsolata", monospace;
-  font-weight: bold;
+  margin-bottom: 2.5rem; 
+
+  font-weight: 700;
+  letter-spacing: -0.03em; 
 }
 
 .albums-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 20rem;
+  min-height: 22rem; 
   width: 100%;
-  overflow-x: auto;
   position: relative;
   padding: 2rem 0;
   box-sizing: border-box;
 }
 
-/* --- Carousel, Cards --- */
+/* --- Carousel e Cards --- */
+.albums-list-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+
+}
+
 .albums-list {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
+  width: max-content; 
   gap: 2.5rem;
-  padding: 2rem 0;
+  padding: 0; 
   position: relative;
+  transition: transform var(--transition-speed-slow) cubic-bezier(0.4, 0, 0.2, 1); 
 }
 
 .album-card-container {
-  width: 14rem;
-  min-width: 12rem;
+  min-width: 14rem; 
   max-width: 90vw;
   position: relative;
   text-align: center;
   cursor: pointer;
-  transition: opacity 0.3s, transform 0.5s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s;
   opacity: 0.7;
   filter: blur(0.5px);
+  transition: all var(--transition-speed-normal) ease-in-out; /* Transição para todas as propriedades */
+  transform: scale(0.9); /* Inicia menor */
+  perspective: 1000px; /* Para efeitos 3D futuros, se desejar */
 }
+
+.album-card-container:hover:not(.center-card) {
+  opacity: 0.85;
+  filter: blur(0.2px);
+  transform: scale(0.95);
+}
+
 .album-card {
   width: 100%;
-  height: 20rem;
-  background-color: #1e3653;
-  border-radius: 16px;
-  margin: 0 auto 0.2rem auto;
-  box-shadow: 0 8px 32px rgba(30, 54, 83, 0.35);
+  height: 20rem; /* Altura do card */
+  background-color: var(--primary-dark);
+  border-radius: var(--border-radius-md);
+  margin: 0 auto 0.5rem auto; /* Ajuste de espaçamento */
+  box-shadow: var(--shadow-medium);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -141,310 +250,469 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform var(--transition-speed-normal) ease;
 }
 
-/* --- Títulos dos álbuns --- */
+.album-card-container:hover .album-card img {
+  transform: scale(1.03); /* Leve zoom na imagem ao passar o mouse */
+}
+
+/* --- Títulos dos Álbuns --- */
 .album-card-info {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 0.2rem;
-  box-shadow: none !important;
-  border: none !important;
-  background: none !important;
-  padding: 0.7rem 0 0.5rem 0;
+  margin-top: 0.3rem;
+  padding: 0.5rem 0; /* Ajuste de padding */
   width: 100%;
-  border-radius: 0 0 12px 12px;
 }
 
-.album-card-title, .album-card-subtitle {
-  background: none !important;
-  border: none !important;
+.album-card-title,
+.album-card-subtitle {
+  background: none;
+  border: none;
   margin: 0;
   padding: 0;
   text-align: center;
+
 }
 
 .album-card-title {
-  font-size: 1.25rem;
-  font-family: "Inconsolata", monospace;
-  font-weight: bold;
-  color: #1e3653;
-  margin-bottom: 0.2rem;
+  font-size: 1.35rem; 
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 0.3rem;
 }
 
 .album-card-subtitle {
-  font-size: 1rem;
-  color: #666;
-  font-family: "Inconsolata", monospace;
+  font-size: 1.05rem;
+  color: var(--text-medium);
+  font-weight: 400;
 }
 
-/* --- Botões de navegação --- */
+/* --- Botões de Navegação --- */
 .nav-button {
-  all: unset;
-  color: #22334a;
-  background: none;
-  font-size: 4.5rem;
-  font-weight: bold;
+  all: unset; 
+  color: var(--primary-dark);
+  background-color: rgba(255, 255, 255, 0.8); 
+  border-radius: 50%; 
   cursor: pointer;
   z-index: 10;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  box-shadow: none;
-  width: auto;
-  height: auto;
-  padding: 0;
-  stroke-width: 2.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px; /* Tamanho fixo */
+  height: 50px;
+  font-size: 2rem; /* Tamanho do ícone */
+  box-shadow: var(--shadow-light);
+  transition: all var(--transition-speed-fast) ease;
 }
+
+.nav-button:hover:not(:disabled) {
+  background-color: var(--white);
+  color: var(--primary-dark);
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: var(--shadow-medium);
+}
+
 .nav-button.nav-left {
-  left: 0.5rem;
-  right: auto;
+  left: 1rem;
 }
 .nav-button.nav-right {
-  right: 0.5rem;
-  left: auto;
+  right: 1rem;
 }
+
 .nav-button:disabled {
-  opacity: 0.2;
+  opacity: 0.4; /* Mais visível que o 0.2 */
   cursor: not-allowed;
-  display: none;
+  box-shadow: none;
+  transform: translateY(-50%); /* Remove a escala ao desabilitar */
 }
-.nav-button:disabled,
+
+/* Condições de exibição para botões (manter a lógica do componente React) */
+.nav-button[disabled] {
+  display: none; /* Se a lógica do React já oculta, esta regra reforça */
+}
+/* A regra abaixo pode ser removida se a lógica do React já cuida disso */
 .single-item ~ .nav-button,
 .empty ~ .nav-button {
   display: none;
 }
 
-.modal-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  justify-content: center;
-}
-
-.modal-input {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  flex: 1;
-}
-.modal-button {
-  background-color: #1e3653;
-  width: 100%;
-  color: white;
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.modal-input-group {
-  flex: 1;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  gap: 0.3rem;
-}
-.modal-marca-dagua {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.modal-select {
-  padding: 0.5rem 2rem 0.5rem 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  width: 100%;
-  color: #1e3653;
-}
-.modal-label {
-  font-size: 1rem;
-  color: #1e3653;
-  font-weight: bold;
-}
-.modal-help-button {
-  border-radius: 5px;
-  border: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  font-size: 1.5rem;
-    background-color: #1e3653;
-    color: white;
-}
-
-.modal-title {
-  color: #1e3653;
-  text-align: center;
-}
-
 /* Card central destacado */
 .center-card {
-  transform: scale(1.12);
+  transform: scale(1.15); /* Um pouco mais de destaque */
   opacity: 1 !important;
   filter: none !important;
-  z-index: 2;
+  z-index: 3; /* Garante que ele esteja acima */
+}
+
+.center-card .album-card {
+  box-shadow: var(--shadow-heavy); /* Sombra mais pronunciada */
 }
 
 /* Cards laterais menos destacados */
-.left-card, .right-card, .left-half-card, .right-half-card {
+.left-card,
+.right-card,
+.left-half-card,
+.right-half-card {
   z-index: 1;
   opacity: 0.6;
-  filter: blur(0.5px);
-}
-
-/* Imagem do card do álbum */
-.album-card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+  filter: blur(0.7px); /* Levemente mais embaçado */
+  transform: scale(0.85); /* Menor ainda */
 }
 
 /* Fallback para card sem imagem */
 .album-card-fallback {
   width: 100%;
   height: 100%;
+  background-color: var(--secondary-light); /* Cor de fundo para o fallback */
+  background-image: linear-gradient(
+    45deg,
+    var(--secondary-light) 25%,
+    rgba(30, 54, 83, 0.1) 25%,
+    rgba(30, 54, 83, 0.1) 50%,
+    var(--secondary-light) 50%,
+    var(--secondary-light) 75%,
+    rgba(30, 54, 83, 0.1) 75%,
+    rgba(30, 54, 83, 0.1) 100%
+  );
+  background-size: 15px 15px; /* Padrão sutil */
 }
 
 /* Quando houver dois álbuns, ambos devem ser destacados */
 .albums-list.two-items .album-card-container {
-  transform: scale(1.12);
+  transform: scale(1.08); /* Destaque sutil para dois itens */
   opacity: 1 !important;
   filter: none !important;
   z-index: 2;
-  box-shadow: 0 8px 32px rgba(30, 54, 83, 0.35);
 }
 
-/* Esconde as setas quando há dois álbuns */
-.albums-list-wrapper.two-items ~ .nav-button {
-  display: none !important;
+.albums-list.two-items .album-card {
+  box-shadow: var(--shadow-medium);
 }
 
-/* ----------- RESPONSIVO ----------- */
+/* --- Estilos de Modal --- */
+/* O modal em si (.ReactModal__Content) é tipicamente estilizado por uma biblioteca,
+   mas aqui estão as classes internas que você pode controlar. */
+.modal-title {
+  color: var(--primary-dark);
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-family: var(--font-family-inconsolata);
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem; /* Mais espaçamento */
+  padding: 0.5rem;
+}
+
+.modal-label {
+  font-size: 1.05rem;
+  color: var(--text-dark);
+  font-weight: 600;
+  margin-bottom: 0.2rem; /* Espaçamento entre label e input/select */
+}
+
+.modal-input,
+.modal-select {
+  padding: 0.8rem 1rem; /* Mais padding para maior área de clique */
+  border: 1px solid #ccc;
+  border-radius: var(--border-radius-sm);
+  font-size: 1rem;
+  color: var(--text-dark);
+  background-color: var(--white);
+  transition: border-color var(--transition-speed-fast) ease, box-shadow var(--transition-speed-fast) ease;
+  width: 100%; /* Garante que o input/select ocupe a largura total disponível */
+}
+
+.modal-input::placeholder {
+  color: var(--text-medium);
+  opacity: 0.7;
+}
+
+.modal-input:focus,
+.modal-select:focus {
+  outline: none;
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 2px rgba(30, 54, 83, 0.2);
+}
+
+.modal-input-group {
+  display: flex;
+  align-items: stretch; /* Garante que os itens tenham a mesma altura */
+  gap: 0.8rem; /* Espaçamento entre input e botão de ajuda */
+  width: 100%;
+}
+
+.modal-input-group .modal-input {
+  flex-grow: 1; /* Permite que o input ocupe o espaço restante */
+}
+
+.modal-marca-dagua {
+  display: flex;
+  flex-direction: column; /* Coloca label acima do input/select */
+  gap: 0.5rem; /* Espaçamento entre label e input/select */
+  width: 100%;
+}
+
+.modal-help-button {
+  background-color: var(--primary-dark);
+  color: var(--white);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.6rem; /* Tamanho do ícone */
+  width: 40px; /* Tamanho fixo para o botão */
+  flex-shrink: 0; /* Impede que ele encolha */
+  transition: background-color var(--transition-speed-fast) ease, transform var(--transition-speed-fast) ease;
+}
+
+.modal-help-button:hover {
+  background-color: #2a4d79; /* Um pouco mais claro */
+  transform: translateY(-1px);
+}
+
+.modal-button {
+  background-color: var(--primary-dark);
+  color: var(--white);
+  padding: 1rem 1.5rem; /* Mais padding para um botão mais substancial */
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: background-color var(--transition-speed-fast) ease, transform var(--transition-speed-fast) ease;
+  width: 100%;
+}
+
+.modal-button:hover {
+  background-color: #2a4d79;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-light);
+}
+
+.modal-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* ----------- RESPONSIVIDADE ----------- */
 @media (max-width: 1200px) {
   .album-card {
     height: 16rem;
   }
   .album-card-container {
-    width: 11rem;
-    min-width: 9rem;
+    min-width: 12rem;
   }
   .nav-button {
-    font-size: 3.2rem;
+    font-size: 1.8rem;
+    width: 45px;
+    height: 45px;
+  }
+  .main-title {
+    font-size: 2.2rem;
   }
 }
+
 @media (max-width: 900px) {
+  .sidebar {
+    width: 25%;
+    left: 0.8rem;
+    top: 6rem;
+    height: 85vh;
+  }
+  .main {
+    margin-left: 28%;
+    padding: 5rem 1rem 1.5rem 1rem;
+  }
   .album-card {
-    height: 12rem;
+    height: 14rem;
   }
   .album-card-container {
-    width: 8.5rem;
-    min-width: 7rem;
+    min-width: 10rem;
+  }
+  .nav-button {
+    font-size: 1.6rem;
+    width: 40px;
+    height: 40px;
   }
   .nav-button.nav-left {
-    left: -0.5rem;
+    left: 0.5rem;
   }
   .nav-button.nav-right {
-    right: -0.5rem;
+    right: 0.5rem;
+  }
+  .main-title {
+    font-size: 1.8rem;
   }
 }
-@media (max-width: 700px) {
+
+@media (max-width: 768px) {
   .sidebar {
     position: static;
-    width: 100vw;
+    width: 95vw;
     max-width: none;
     left: 0;
     top: 0;
     height: auto;
-    border-radius: 0 0 10px 10px;
-    box-shadow: 0 3px 6px rgba(30, 54, 83, 0.07);
-    z-index: 70;
-    padding-top: 0;
-    margin-bottom: 1.2rem;
+    border-radius: var(--border-radius-lg);
+    margin: 1rem auto;
+    box-shadow: var(--shadow-medium);
   }
   .sidebar-header {
-    border-radius: 0;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
   }
   .main {
-    margin: 0;
-    padding: 0.5rem 0.5rem 1rem 0.5rem;
-    width: 100vw;
+    margin: 0 auto;
+    padding: 1rem 0.8rem 2rem 0.8rem;
+    width: 100%;
     min-width: 0;
   }
   .albums-container {
-    width: 100vw;
+    width: 100%;
     min-width: 0;
     margin: 0 auto;
-    padding: 0.5rem 0 1.5rem 0;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
+    padding: 1rem 0;
+    flex-direction: column; 
     align-items: center;
     justify-content: flex-start;
   }
+  .albums-list-wrapper {
+    width: 90%;
+    overflow-x: auto; /* Permite rolagem horizontal para os cards */
+    -webkit-overflow-scrolling: touch; /* Para iOS */
+    padding-bottom: 1rem; /* Espaço para a barra de rolagem */
+    scrollbar-width: none; /* Esconde a barra de rolagem para Firefox */
+  }
+  .albums-list-wrapper::-webkit-scrollbar {
+    display: none; /* Esconde a barra de rolagem para Webkit */
+  }
   .albums-list {
-    width: 100vw;
-    min-width: 0;
-    justify-content: center;
-    align-items: center;
-    gap: 0.7rem;
-    padding: 0;
+    width: max-content; /* Permite que a lista tenha mais que 100% de largura */
+    justify-content: flex-start; /* Alinha os itens ao início para rolagem */
+    gap: 1.5rem; /* Ajuste o espaçamento */
+    padding: 0 1rem; /* Adiciona padding nas laterais para melhor visualização */
   }
   .album-card-container {
-    width: 95vw;
-    min-width: 90px;
-    max-width: 97vw;
-    margin: 0 auto 1.2rem auto;
+
+    width: 40vw; /* Adapta a largura para preencher a tela */
+    max-width: 250px; /* Limite de largura para evitar cards muito grandes */
+    margin: 0; /* Remove margem para não interferir no gap */
+    transform: scale(1); /* Desabilita a escala para cards laterais */
+    opacity: 1; /* Remove opacidade para cards laterais */
+    filter: none; /* Remove blur para cards laterais */
+  }
+  .album-card-container:hover:not(.center-card) {
+    transform: scale(1.03); /* Leve destaque ao passar o mouse */
   }
   .album-card {
-    height: 6.5rem;
+    height: 12rem;
   }
   .album-card-title {
-    font-size: 0.85rem;
+    font-size: 1.1rem;
   }
   .album-card-subtitle {
-    font-size: 0.7rem;
+    font-size: 0.9rem;
   }
   .nav-button {
-    font-size: 1.5rem;
-    left: 0;
-    right: 0;
+    display: none !important; /* Desativa botões de navegação em telas pequenas, usar scroll */
   }
   .main-title {
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
   }
-}
-@media (max-width: 470px) {
-  .album-card-container {
-    min-width: 90px;
-    width: 95vw;
-  }
-  .album-card {
-    height: 6.5rem;
-  }
-  .album-card-title {
-    font-size: 0.85rem;
-  }
-  .album-card-subtitle {
-    font-size: 0.7rem;
+
+  /* Ajustar modal para telas menores */
+  .ReactModal__Content,
+  .modal-content {
+    width: 90vw !important;
+    max-width: 450px !important;
+    min-width: unset !important;
+    box-sizing: border-box;
+    padding: 1.5rem !important; /* Ajuste o padding do modal */
   }
 }
 
-/* Ajustar modal para telas menores */
-@media (max-width: 600px) {
-  .ReactModal__Content,
-  .modal-content,
-  .modal-form {
-    min-width: unset !important;
-    width: 97vw !important;
-    max-width: 99vw !important;
-    box-sizing: border-box;
+@media (max-width: 480px) {
+  .sidebar {
+    margin: 0.5rem auto;
+    border-radius: var(--border-radius-md);
+  }
+  .sidebar-header {
+    border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+    height: 3rem;
+  }
+  .plus-icon {
+    font-size: 2rem;
+  }
+  .sidebar-content {
+    padding: 1rem 0.8rem;
+  }
+  .album-title {
+    font-size: 1.2rem;
+  }
+  .client-item button {
+    font-size: 1.1rem;
+  }
+  .client-name {
+    font-size: 0.95rem;
+  }
+  .main {
+    padding: 0.5rem 0.5rem 1rem 0.5rem;
+  }
+  .main-title {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+  .albums-list {
+    gap: 1rem;
+    padding: 0 0.5rem;
+  }
+  .album-card-container {
+    min-width: 140px;
+    width: 45vw;
+  }
+  .album-card {
+    height: 10rem;
+    border-radius: var(--border-radius-sm);
+  }
+  .album-card-title {
+    font-size: 1rem;
+  }
+  .album-card-subtitle {
+    font-size: 0.8rem;
+  }
+  .modal-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .modal-label {
+    font-size: 0.95rem;
+  }
+  .modal-input,
+  .modal-select {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  .modal-button {
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+  }
+  .modal-help-button {
+    width: 35px;
+    height: 35px;
+    font-size: 1.4rem;
   }
 }
 
@@ -454,17 +722,20 @@
     height: 16rem;
   }
   .albums-container {
-    min-height: 12rem;
+    min-height: 18rem;
   }
   .main-title {
-    font-size: 1.55rem;
+    font-size: 2rem;
   }
 }
 @media (max-height: 600px) {
   .album-card {
-    height: 10rem;
+    height: 12rem;
   }
   .albums-container {
-    min-height: 6rem;
+    min-height: 14rem;
+  }
+  .main-title {
+    font-size: 1.8rem;
   }
 }

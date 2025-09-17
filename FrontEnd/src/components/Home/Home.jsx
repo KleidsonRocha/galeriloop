@@ -97,6 +97,12 @@ const Home = () => {
     fetchAlbums();
   }, []);
 
+  useEffect(() => {
+    if (albums.length > 0) {
+      fetchAlbumsPhotoCount(albums);
+    }
+  }, [albums]);
+
   const fetchFavoriteImages = async (albumsList) => {
     const favoriteImagesObj = {};
     // Busca em paralelo todas as imagens favoritedas
@@ -116,7 +122,7 @@ const Home = () => {
     }));
     setFavoriteImages(favoriteImagesObj);
   };
-  
+
   const fetchAlbums = async () => {
     try {
       const response = await fetch(`${VITE_API_URL}/album/getAlbums`, {
@@ -131,7 +137,7 @@ const Home = () => {
       const data = await response.json();
       setAlbums(data);
       setCurrentIndex(0);
-  
+
       // NOVO: Buscar imagens favoritas após carregar álbuns
       await fetchFavoriteImages(data);
     } catch (error) {
@@ -246,7 +252,7 @@ const Home = () => {
     for (let i = -1; i <= 1; i++) {
       const index = (currentIndex + i + favoriteAlbums.length) % favoriteAlbums.length;
       if (favoriteAlbums.length < 3 && result.some(item => item.id === favoriteAlbums[index].id)) {
-          continue;
+        continue;
       }
       result.push({
         ...favoriteAlbums[index],
@@ -254,11 +260,11 @@ const Home = () => {
       });
     }
     if (favoriteAlbums.length === 2 && result.length === 2) {
-        result[0].position = -0.5;
-        result[1].position = 0.5;
+      result[0].position = -0.5;
+      result[1].position = 0.5;
     }
     if (favoriteAlbums.length === 1 && result.length === 1) {
-        result[0].position = 0;
+      result[0].position = 0;
     }
 
     return result;
@@ -286,7 +292,6 @@ const Home = () => {
     return '';
   };
 
-  // Busca a quantidade de fotos de cada álbum favorito
   const fetchAlbumsPhotoCount = async (albumsList) => {
     const counts = {};
     await Promise.all(albumsList.map(async (album) => {
@@ -305,12 +310,6 @@ const Home = () => {
     }));
     setAlbumsPhotoCount(counts);
   };
-
-  useEffect(() => {
-    if (albums.length > 0) {
-      fetchAlbumsPhotoCount(albums);
-    }
-  }, [albums]);
 
   return (
     <>
@@ -402,7 +401,7 @@ const Home = () => {
         <Modal isOpen={ModalAlbum} onClose={() => setModalAlbum(false)}>
           <h3 className='modal-title'>Criar novo Álbum</h3>
           <form onSubmit={handleSubmit} className="modal-form">
-             <input type="text" name="albumName" className="modal-input" placeholder="Digite o nome do álbum" required />
+            <input type="text" name="albumName" className="modal-input" placeholder="Digite o nome do álbum" required />
             <div className='modal-input-group'>
               <input type="text" name="subgroups" className="modal-input" placeholder="Digite os subgrupos separados por ';'. Ex: Subgrupo1; Subgrupo2" />
               <button onClick={() => setModalHelp(true)} type="button" className="modal-help-button" aria-label="Ajuda"><IoMdHelp /></button>
@@ -417,13 +416,13 @@ const Home = () => {
             </div>
             <input type="file" name="image" className="modal-input" accept="image/*" id="image" />
             <div className='modal-marca-dagua'>
-               <label htmlFor="valorDigital" className="modal-label">Valor padrão para foto digital:</label>
-               <input type="number" name="valorDigital" id="valorDigital" className="modal-input" step="0.01" min="0" placeholder="0,00" />
-             </div>
-             <div className='modal-marca-dagua'>
-               <label htmlFor="valorFisica" className="modal-label">Valor padrão para foto fisica:</label>
-               <input type="number" name="valorFisica" id="valorFisica" className="modal-input" step="0.01" min="0" placeholder="0,00" />
-             </div>
+              <label htmlFor="valorDigital" className="modal-label">Valor padrão para foto digital:</label>
+              <input type="number" name="valorDigital" id="valorDigital" className="modal-input" step="0.01" min="0" placeholder="0,00" />
+            </div>
+            <div className='modal-marca-dagua'>
+              <label htmlFor="valorFisica" className="modal-label">Valor padrão para foto fisica:</label>
+              <input type="number" name="valorFisica" id="valorFisica" className="modal-input" step="0.01" min="0" placeholder="0,00" />
+            </div>
             <button type="submit" className="modal-button">Criar</button>
           </form>
         </Modal>
