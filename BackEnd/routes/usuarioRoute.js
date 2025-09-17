@@ -233,7 +233,6 @@ router.post('/recover-password', async (req, res) => {
   }
 });
 
-// VERSÃO 1: Busca dados Pix do banco
 router.get('/pix-config', verificarToken, async (req, res) => {
   let connection;
   try {
@@ -251,7 +250,6 @@ router.get('/pix-config', verificarToken, async (req, res) => {
   }
 });
 
-// Atualiza dados Pix do usuário autenticado
 router.put('/pix-config', verificarToken, async (req, res) => {
   const { chave_pix, nome_empresa, cidade } = req.body;
   if (!chave_pix || !nome_empresa || !cidade) {
@@ -272,15 +270,33 @@ router.put('/pix-config', verificarToken, async (req, res) => {
   }
 });
 
-/* VERSÃO 2: Dados Pix fixos para teste
-router.get('/pix-config', verificarToken, (req, res) => {
-  console.log("entrou na rota pix-config");
-  res.json({
-    chave_pix: 'matheuswastchuk@gmail.com',
-    nome_empresa: 'Galeriloop',
+router.get('/pix-config-public/:adminId', async (req, res) => {
+    let connection;
+    try {
+        connection = await req.pool.getConnection();
+        const { adminId } = req.params;
 
-    cidade: 'ERECHIM'
-  });
-});*/
+        // Validar se adminId é um número
+        if (isNaN(parseInt(adminId))) {
+            return res.status(400).json({ message: 'ID de administrador inválido.' });
+        }
+
+        const [rows] = await connection.execute(
+            'SELECT chave_pix, nome_empresa, cidade FROM usuarios WHERE id = ?',
+            [adminId]
+        );
+
+        if (rows.length === 0 || !rows[0].chave_pix) {
+            // Retorna 404 se o admin_id não existir ou não tiver chave Pix configurada
+            return res.status(404).json({ message: 'Dados Pix do administrador não encontrados ou não configurados.' });
+        }
+        res.json(rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar dados Pix para adminId:', adminId, error);
+        res.status(500).json({ message: 'Erro ao buscar dados Pix.', error: error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
 
 module.exports = router;

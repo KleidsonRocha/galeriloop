@@ -278,8 +278,37 @@ router.get('/shared/:token', async (req, res) => {
       link.alvo_id, 
       link.tipo_alvo
     );
-    
-    return res.status(result.status).json(result.data);
+
+    // Se a função getFotosCompartilhamento já retorna o adminId dentro de result.data.dados
+    if (result.data && result.data.dados && result.data.dados.admin_id) {
+        return res.status(result.status).json(result.data); // Já inclui o admin_id
+    } else {
+        // Se não, precisamos buscar o admin_id separadamente
+        let adminId = null;
+        if (link.tipo_alvo === 'album') {
+            const [albumOwner] = await connection.execute(
+                'SELECT admin_id FROM albuns WHERE id = ?',
+                [link.alvo_id]
+            );
+            if (albumOwner.length > 0) adminId = albumOwner[0].admin_id;
+        } else if (link.tipo_alvo === 'subalbum') {
+            const [subalbumParent] = await connection.execute(
+                'SELECT a.admin_id FROM subalbuns sa JOIN albuns a ON sa.album_id = a.id WHERE sa.id = ?',
+                [link.alvo_id]
+            );
+            if (subalbumParent.length > 0) adminId = subalbumParent[0].admin_id;
+        }
+
+        // Adicionar o adminId à resposta, se encontrado
+        if (adminId !== null) {
+            return res.status(result.status).json({ ...result.data, adminId: adminId });
+        } else {
+            // Se adminId não foi encontrado, retornar a resposta original de imageUtils
+            // ou um erro se adminId for mandatório
+            console.warn(`Admin ID não encontrado para ${link.tipo_alvo} ${link.alvo_id}`);
+            return res.status(result.status).json(result.data);
+        }
+    }
     
   } catch (err) {
     console.error('Erro ao acessar link compartilhado:', err);
