@@ -26,7 +26,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const COLORS = {
   primary: '#1E3653',
   secondary: '#2A4B7C',
-  accent: '#FFD700', 
+  accent: '#FFD700',
   background: '#F0F2F5',
   cardBackground: '#FFFFFF',
   textPrimary: '#333333',
@@ -83,20 +83,19 @@ const getImageUrl = (image) => {
     return 'https://via.placeholder.com/300x200?text=Imagem+Indispon%C3%ADvel';
   }
 
-  if (typeof image.dados === 'string' ) {
-    if (image.dados.startsWith('data:')) {
+
+  if (typeof image.dados === 'string') {
+    if (image.dados.startsWith('data:') || image.dados.startsWith('http')) {
       return image.dados;
     }
+
     return `data:${image.tipo_mime || 'image/jpeg'};base64,${image.dados}`;
   }
 
-  if (
-    typeof image.dados === 'object' &&
-    image.dados.type === 'Buffer' &&
-    Array.isArray(image.dados.data)
-  ) {
+
+  if (typeof image.dados === 'object' && image.dados.type === 'Buffer' && Array.isArray(image.dados.data)) {
     try {
-      // Para React Native, usamos uma abordagem diferente para converter Buffer
+
       const base64String = btoa(String.fromCharCode(...image.dados.data));
       return `data:${image.tipo_mime || 'image/jpeg'};base64,${base64String}`;
     } catch (e) {
@@ -105,8 +104,10 @@ const getImageUrl = (image) => {
     }
   }
 
-  if (Array.isArray(image.dados )) {
+  // Para dados que são apenas um array de bytes (comum em alguns retornos)
+  if (Array.isArray(image.dados)) {
     try {
+      // Mesma observação sobre btoa aqui
       const base64String = btoa(String.fromCharCode(...image.dados));
       return `data:${image.tipo_mime || 'image/jpeg'};base64,${base64String}`;
     } catch (e) {
@@ -119,11 +120,12 @@ const getImageUrl = (image) => {
     'Formato de dados de imagem inesperado. Esperava string base64, Buffer JSON ou array de bytes:',
     typeof image.dados,
     image.dados
-   );
+  );
   return 'https://via.placeholder.com/300x200?text=Erro+de+Processamento';
 };
 
-const UnavailableImageCard = ({ image } ) => (
+
+const UnavailableImageCard = ({ image }) => (
   <View style={styles.imageCardUnavailable}>
     <View style={styles.placeholderImage}>
       <Text style={styles.unavailableIcon}>⚠️</Text>
@@ -156,16 +158,16 @@ const StatusIndicator = ({ isRefreshing }) => {
 const MultiSelectSubalbums = ({ options, selectedValues, onSelectionChange, disabled = false }) => {
   const toggleSelection = (value) => {
     if (disabled) return;
-    
+
     const isSelected = selectedValues.includes(value);
     let newSelection;
-    
+
     if (isSelected) {
       newSelection = selectedValues.filter(v => v !== value);
     } else {
       newSelection = [...selectedValues, value];
     }
-    
+
     onSelectionChange(newSelection);
   };
 
@@ -247,17 +249,26 @@ const AlbumDetails = () => {
   const [isDeletingAlbum, setIsDeletingAlbum] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // --- Estados para paginação ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalImagesCount, setTotalImagesCount] = useState(0); // Total de imagens no álbum
+  const IMAGES_PER_PAGE = 10; // Quantidade de imagens por página
+  // --- Fim dos estados de paginação ---
+
   const subalbumOptions = subalbuns.map(subalbum => ({
     value: subalbum.id,
     label: subalbum.nome,
   }));
 
-  const GetImages = async () => {
+  // Renomeada e ajustada para a nova lógica de paginação
+  const fetchImages = async (pageToLoad) => {
     try {
       setError(null);
+      setLoading(true);
 
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch(`${API_URL}/fotos/getAlbumsPhotos?albumId=${id}`, {
+      // Adiciona os parâmetros de paginação (page e limit) à URL
+      const response = await fetch(`${API_URL}/fotos/getAlbumsPhotos?albumId=${id}&page=${pageToLoad}&limit=${IMAGES_PER_PAGE}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -265,31 +276,41 @@ const AlbumDetails = () => {
       });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          return [];
+        if (response.status === 404) { // Álbum vazio ou não existe
+          setImages([]);
+          setTotalImagesCount(0);
+          return;
         }
         throw new Error(`Erro no servidor: ${response.status}`);
       }
 
-      const data = await response.json();
+      const responseData = await response.json();
+      console.log('Resposta do backend (com paginação):', responseData);
 
-      if (data.message && data.images) {
-        console.log('Modo de contingência ativado:', data.message);
-        setMessage({
-          text: data.message,
-          type: 'warning'
-        });
-        return data.images;
+      const fetchedImages = responseData.images || [];
+      const totalAvailableImages = responseData.totalImages || 0;
+
+      setImages(fetchedImages); // Sempre substitui as imagens
+      setTotalImagesCount(totalAvailableImages); // Atualiza o total de imagens
+
+      // Verifica se o formato da resposta mudou (devido ao Circuit Breaker fallback)
+      if (responseData.message && responseData.images) {
+        console.log('Modo de contingência ativado:', responseData.message);
+        setMessage({ text: responseData.message, type: 'warning' });
       }
 
-      console.log('Imagens recebidas (quantidade):', data.length);
-      return data;
     } catch (error) {
       console.error('Erro ao buscar imagens:', error);
-      throw error;
+      setError('Não foi possível carregar as imagens. Tente novamente mais tarde.');
+      setMessage({ text: 'Erro ao carregar imagens', type: 'error' });
+      setImages([]);
+      setTotalImagesCount(0);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Ajustada para resetar a página e recarregar
   const refreshImages = async () => {
     if (isRefreshing) return;
 
@@ -297,8 +318,13 @@ const AlbumDetails = () => {
       setIsRefreshing(true);
       setMessage({ text: 'Atualizando imagens...', type: 'info' });
 
-      const data = await GetImages();
-      setImages(data);
+      // Se a página atual não for 1, definimos para 1. O useEffect fará a chamada.
+      // Se já for 1, chamamos fetchImages(1) diretamente para garantir o refresh.
+      if (currentPage !== 1) {
+        setCurrentPage(1); // Isso vai disparar o useEffect para buscar a página 1
+      } else {
+        await fetchImages(1); // Se já está na página 1, força o recarregamento
+      }
 
       setMessage({ text: 'Imagens atualizadas com sucesso!', type: 'success' });
       setTimeout(() => setMessage({ text: '', type: '' }), 3000);
@@ -310,31 +336,16 @@ const AlbumDetails = () => {
     }
   };
 
+  // Único useEffect para carregar detalhes e imagens. Dispara quando 'id' ou 'currentPage' muda.
   useEffect(() => {
     fetchAlbumDetails();
+    fetchImages(currentPage); // Busca as imagens para a página atual
+  }, [id, currentPage]); // Dependências: id do álbum e página atual
 
-    const fetchImages = async () => {
-      try {
-        setLoading(true);
-        const data = await GetImages();
-        console.log('Dados recebidos:', data);
-        setImages(data);
-        setError(null);
-      } catch (err) {
-        console.error('Erro ao carregar imagens:', err);
-        setError('Não foi possível carregar as imagens. Tente novamente mais tarde.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchImages();
-
-  }, [id]);
 
   useEffect(() => {
     if (subalbuns.length > 0) {
-      setSelectedSubalbuns(subalbuns.map(s => s.id));
+      // setSelectedSubalbuns(subalbuns.map(s => s.id)); // Removido, pois é para adicionar imagem
       const options = subalbuns.map(subalbum => ({
         value: subalbum.id,
         label: subalbum.nome
@@ -346,6 +357,8 @@ const AlbumDetails = () => {
   useEffect(() => {
     return () => {
       // Limpeza de cache de imagens - adaptado para React Native
+      // Em React Native, URLs de blob criadas com createObjectURL não são usadas
+      // O cache de imagem aqui se refere a um Map in-memory, então limpar faz sentido.
       imageCache.current.clear();
     };
   }, [images]);
@@ -377,11 +390,11 @@ const AlbumDetails = () => {
 
   const handleDeleteAlbum = async () => {
     if (isDeletingAlbum) return;
-    
+
     try {
       setIsDeletingAlbum(true);
       setMessage({ text: 'Excluindo álbum...', type: 'info' });
-      
+
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_URL}/album/deleteAlbum/${id}`, {
         method: 'DELETE',
@@ -389,17 +402,17 @@ const AlbumDetails = () => {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Erro ao excluir o álbum');
       }
-      
+
       setMessage({ text: 'Álbum excluído com sucesso!', type: 'success' });
-      
+
       setTimeout(() => {
         router.push('/home');
       }, 1500);
-      
+
     } catch (error) {
       console.error('Erro:', error);
       setMessage({ text: 'Erro ao excluir o álbum', type: 'error' });
@@ -475,7 +488,7 @@ const AlbumDetails = () => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data', 
+          'Content-Type': 'multipart/form-data',
         },
         body: formData,
       });
@@ -544,9 +557,9 @@ const AlbumDetails = () => {
     setEditPrecoFisica(image.preco_fisica || album?.preco_fisica_padrao || 0);
     setEditIsFisica(image.fisica || false);
     setEditIsDigital(image.digital || true);
-    
+
     fetchImageSubalbums(image.id);
-    
+
     setEditModalOpen(true);
   };
 
@@ -581,7 +594,7 @@ const AlbumDetails = () => {
 
       setMessage({ text: 'Imagem atualizada com sucesso!', type: 'success' });
       setEditModalOpen(false);
-      
+
       refreshImages();
     } catch (error) {
       console.error('Erro:', error);
@@ -624,9 +637,9 @@ const AlbumDetails = () => {
 
   const handleFavoriteImage = async () => {
     if (!selectedImage) return;
-  
+
     setIsLoading(true);
-  
+
     try {
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_URL}/fotos/favoritePhoto`, {
@@ -637,13 +650,13 @@ const AlbumDetails = () => {
         },
         body: JSON.stringify({ imageId: selectedImage.id }),
       });
-  
+
       const result = await response.json();
-  
+
       if (!response.ok) {
         throw new Error(result.message || 'Erro ao favoritar imagem');
       }
-  
+
       Alert.alert('Sucesso', 'Imagem favoritada com sucesso!');
       refreshImages();
     } catch (error) {
@@ -668,19 +681,19 @@ const AlbumDetails = () => {
       }
 
       const data = await response.json();
-      
+
       const selectedSubalbumOptions = data.map(subalbumId => ({
         value: subalbumId,
         label: subalbuns.find(s => s.id === subalbumId)?.nome || `Subálbum ${subalbumId}`
       }));
-      
+
       setSelectedImageSubalbuns(selectedSubalbumOptions);
     } catch (error) {
       console.error('Erro ao buscar subálbuns da imagem:', error);
       setMessage({ text: 'Erro ao buscar subálbuns da imagem', type: 'error' });
     }
   };
-  
+
   const generateLinks = async () => {
     setIsGeneratingLinks(true);
     setMessage({ text: 'Processando links de acesso...', type: 'info' });
@@ -758,7 +771,7 @@ const AlbumDetails = () => {
   const copyToClipboard = async (text, id) => {
     try {
       await Clipboard.setStringAsync(text);
-      
+
       setLinksCopied(prev => ({ ...prev, [id]: true }));
 
       setTimeout(() => {
@@ -780,6 +793,9 @@ const AlbumDetails = () => {
   const filteredImages = images.filter(image =>
     image.nome && image.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Calcula o número total de páginas
+  const totalPages = Math.ceil(totalImagesCount / IMAGES_PER_PAGE);
 
   return (
     <View style={styles.container}>
@@ -834,7 +850,7 @@ const AlbumDetails = () => {
         )}
 
         <View style={styles.albumDetailsContainer}>
-          {loading ? (
+          {loading && images.length === 0 && totalImagesCount === 0 ? (
             <View style={styles.loadingIndicator}>
               <ActivityIndicator size="large" color={COLORS.primary} />
               <Text style={styles.loadingText}>Carregando imagens...</Text>
@@ -843,7 +859,7 @@ const AlbumDetails = () => {
             <View style={styles.errorMessage}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
-          ) : images.length === 0 ? (
+          ) : images.length === 0 && !loading ? (
             <View style={styles.emptyMessage}>
               <Text style={styles.emptyMessageText}>Não há imagens neste álbum</Text>
             </View>
@@ -878,6 +894,35 @@ const AlbumDetails = () => {
                   </TouchableOpacity>
                 );
               })}
+            </View>
+          )}
+
+          {/* Controles de Paginação */}
+          {totalImagesCount > 0 && totalPages > 1 && (
+            <View style={styles.paginationControls}>
+              <TouchableOpacity
+                onPress={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || loading}
+                style={[styles.paginationButton, (currentPage === 1 || loading) && styles.paginationButtonDisabled]}
+              >
+                <Text style={styles.paginationButtonText}>Anterior</Text>
+              </TouchableOpacity>
+              <Text style={styles.paginationPageInfo}>
+                Página {currentPage} de {totalPages}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || loading}
+                style={[styles.paginationButton, (currentPage === totalPages || loading) && styles.paginationButtonDisabled]}
+              >
+                <Text style={styles.paginationButtonText}>Próxima</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {loading && images.length > 0 && (
+            <View style={styles.loadingIndicatorSmall}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={styles.loadingTextSmall}>Carregando imagens da página {currentPage}...</Text>
             </View>
           )}
         </View>
@@ -1142,7 +1187,7 @@ const AlbumDetails = () => {
                         <Text style={styles.modalFormButtonText}>Excluir Imagem</Text>
                       </TouchableOpacity>
                     </View>
-                  
+
                     <View style={styles.modalFormActions}>
                       <TouchableOpacity
                         style={[styles.modalFormButtonSubmit, isLoading && styles.modalFormButtonDisabled]}
@@ -1284,8 +1329,8 @@ const AlbumDetails = () => {
           <View style={styles.deleteConfirmationContainer}>
             <Text style={styles.modalTitle}>Confirmar Exclusão do Álbum</Text>
             <Text style={styles.modalText}>
-              Tem certeza que deseja excluir o álbum <Text style={{ fontWeight: 'bold' }}>{album?.nome}</Text>? 
-              Esta ação excluirá o álbum, todos os seus subálbuns e todas as fotos associadas. 
+              Tem certeza que deseja excluir o álbum <Text style={{ fontWeight: 'bold' }}>{album?.nome}</Text>?
+              Esta ação excluirá o álbum, todos os seus subálbuns e todas as fotos associadas.
               Esta ação não pode ser desfeita.
             </Text>
 
@@ -1516,16 +1561,16 @@ const styles = StyleSheet.create({
   imageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: SPACING.medium,
+    justifyContent: 'space-between', // Para distribuir as imagens uniformemente
+    gap: SPACING.small, // Espaçamento entre as imagens
   },
   imageCard: {
-    width: '45%',
+    width: '48%', // Aproximadamente metade da largura para duas colunas
     backgroundColor: COLORS.cardBackground,
     borderRadius: BORDER_RADIUS.medium,
     overflow: 'hidden',
     ...SHADOWS.medium,
-    marginBottom: SPACING.medium,
+    marginBottom: SPACING.small, // Espaçamento inferior entre as linhas
   },
   imageCardUnavailable: {
     width: '48%',
@@ -1533,7 +1578,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.medium,
     overflow: 'hidden',
     ...SHADOWS.medium,
-    marginBottom: SPACING.medium,
+    marginBottom: SPACING.small,
   },
   albumImage: {
     width: '100%',
@@ -1652,16 +1697,17 @@ const styles = StyleSheet.create({
   // Modal Add Image
   modalAddImageWrapper: { // Wrapper principal do modal de adicionar imagem
     ...modalWrapperBase,
-    maxWidth: 950,
-    maxHeight: '100%',
+    maxWidth: Dimensions.get('window').width * 0.95, // 95% da largura da tela
+    maxHeight: Dimensions.get('window').height * 0.85, // 85% da altura da tela
     flex: 1, // Permite que o wrapper preencha a altura disponível
-    paddingVertical: SPACING.medium, // Padding vertical do wrapper
+    // Remover padding vertical aqui para que o ScrollView gerencie
   },
   modalAddImageScrollView: { // Estilo para o componente ScrollView
     flex: 1, // Permite que o ScrollView ocupe o espaço restante
   },
   modalAddImageScrollViewContent: { // Estilo para o contentContainerStyle do ScrollView
     ...modalScrollContentBase,
+    paddingTop: SPACING.large, // Adiciona padding no topo do conteúdo rolável
   },
   imageUploadContainer: {
     alignItems: 'center',
@@ -1820,19 +1866,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  //editar aqui o valor
   modalEditImageWrapper: { // Wrapper principal do modal de edição de imagem
     ...modalWrapperBase,
-    maxWidth: 1550,
-    maxHeight: '100%',
+    maxWidth: Dimensions.get('window').width * 0.95, // 95% da largura da tela
+    maxHeight: Dimensions.get('window').height * 0.85, // 85% da altura da tela
     flex: 1,
-    paddingVertical: SPACING.medium,
   },
   modalEditImageScrollView: { // Estilo para o componente ScrollView
     flex: 1,
   },
   modalEditImageScrollViewContent: { // Estilo para o contentContainerStyle do ScrollView
     ...modalScrollContentBase,
+    paddingTop: SPACING.large,
   },
   editImagePreviewContainer: {
     alignItems: 'center',
@@ -1858,8 +1903,8 @@ const styles = StyleSheet.create({
   // Delete Confirmation Modal
   deleteConfirmationContainer: { // Container direto para o modal de confirmação
     ...modalWrapperBase,
-    maxWidth: 550,
-    maxHeight: '60%',
+    maxWidth: Dimensions.get('window').width * 0.95,
+    maxHeight: Dimensions.get('window').height * 0.6,
     padding: SPACING.medium, // Padding aplicado diretamente ao container
   },
   deleteConfirmationActions: {
@@ -1872,8 +1917,8 @@ const styles = StyleSheet.create({
   // Share Links Modal
   shareLinksModalWrapper: { // Wrapper principal do modal de links
     ...modalWrapperBase,
-    maxWidth: 900,
-    maxHeight: '85%',
+    maxWidth: Dimensions.get('window').width * 0.95,
+    maxHeight: Dimensions.get('window').height * 0.85,
     flexDirection: 'column', // Para que o ScrollView e o Footer se organizem verticalmente
     padding: SPACING.medium, // Padding geral para todo o conteúdo do modal
   },
@@ -1980,7 +2025,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     position: 'absolute',
-    top: -10,
+    top: -10, // Ajusta a posição vertical do texto sobre a linha
   },
   shareLinksFooter: {
     marginTop: SPACING.medium,
@@ -2053,6 +2098,55 @@ const styles = StyleSheet.create({
     padding: SPACING.medium,
     fontStyle: 'italic',
   },
+
+  // --- Estilos para os Controles de Paginação ---
+  paginationControls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: SPACING.extraLarge,
+    marginBottom: SPACING.extraLarge,
+    gap: SPACING.medium, // Espaço entre os elementos
+    paddingHorizontal: SPACING.medium,
+  },
+  paginationButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.small + 2,
+    paddingHorizontal: SPACING.medium,
+    borderRadius: BORDER_RADIUS.small,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...SHADOWS.small,
+  },
+  paginationButtonDisabled: {
+    backgroundColor: COLORS.border,
+    opacity: 0.7,
+  },
+  paginationButtonText: {
+    color: COLORS.lightGray,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  paginationPageInfo: {
+    fontSize: 16,
+    color: COLORS.primary,
+    fontWeight: '500',
+    textAlign: 'center',
+    minWidth: 100, // Garante que o texto da página não fique muito comprimido
+  },
+  loadingIndicatorSmall: { // Para o indicador de "carregando página X"
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: SPACING.medium,
+  },
+  loadingTextSmall: {
+    marginLeft: SPACING.small,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+
+
 });
 
 export default AlbumDetails;
