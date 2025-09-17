@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
-
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
 require('dotenv').config();
 
 const app = express();
@@ -42,6 +43,8 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+const swaggerDocument = YAML.load('./backend-dev-doc.yaml');
+
 app.use((req, res, next) => {
   req.pool = pool;
   next();
@@ -51,6 +54,7 @@ app.use('/usuarios', usuarioRoute);
 app.use('/fotos', fotoRoute);
 app.use('/album', albumRoute);
 app.use('/orcamentos', orcamentosRoutes); 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.listen(process.env.BE_PORT, () => {
   console.log(`Servidor rodando na porta ${process.env.BE_PORT}`);

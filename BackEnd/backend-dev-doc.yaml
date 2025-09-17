@@ -1,0 +1,1090 @@
+openapi: 3.0.4
+info:
+  title: GaleriLoop API
+  description: |-
+    API para gerenciar usuários, álbuns, fotos e orçamentos do Galeriloop.
+    - [GaleriLoop](https://clayforgestudio.com.br/galeriloop/)
+    - [Repositório](https://github.com/KleidsonRocha/galeriloop)
+  version: 1.0.0
+servers:
+  - url: http://localhost:{BE_PORT}
+    description: Servidor local de desenvolvimento
+    variables:
+      BE_PORT:
+        default: "3000"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    # Usuário
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        email:
+          type: string
+        perfil:
+          type: string
+      required:
+        - id
+        - nome
+        - email
+    pixReq:
+      type: object
+      properties:
+        id:
+          type: integer
+        chave_pix:
+          type: string
+        nome_empresa:
+          type: string
+        cidade:
+          type: string
+      required:
+        - chave_pix
+        - nome_empresa
+        - cidade
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+    Album:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID criptografado do álbum
+        albumName:
+          type: string
+        admin_id:
+          type: integer
+        position:
+          type: string
+        valorDigital:
+          type: number
+        valorFisica:
+          type: number
+    SubAlbum:
+      type: object
+      properties:
+        id:
+          type: integer
+        album_id:
+          type: integer
+        subgroupName:
+          type: string
+    Foto:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        tipo_mime:
+          type: string
+        album_id:
+          type: integer
+        fisica:
+          type: boolean
+        digital:
+          type: boolean
+        precoDigital:
+          type: number
+        precoFisica:
+          type: number
+        favoritado:
+          type: boolean
+    ShareLinkResponse:
+      type: object
+      properties:
+        shareLink:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+    OrcamentoRequest:
+      type: object
+      properties:
+        cliente:
+          type: object
+          properties:
+            nome:
+              type: string
+            email:
+              type: string
+          required:
+            - nome
+            - email
+        itens:
+          type: array
+          items:
+            type: object
+            properties:
+              nome:
+                type: string
+              tipo_midia:
+                type: string
+              quantidade:
+                type: integer
+              preco_unitario:
+                type: number
+            required:
+              - nome
+              - tipo_midia
+              - quantidade
+              - preco_unitario
+        total:
+          type: number
+        albumId:
+          type: integer
+        subalbumId:
+          type: integer
+      required:
+        - cliente
+        - itens
+        - total
+        - albumId
+
+security:
+  - bearerAuth: []
+tags:
+  - name: Usuários
+    description: Endpoints relacionados a usuários, autenticação e perfil
+  - name: Álbuns
+    description: Operações que envolvem álbuns e subálbuns
+  - name: Fotos
+    description: Operações sobre upload, atualização, deleção e compartilhamento de fotos
+  - name: Orçamentos
+    description: Envio de orçamentos
+
+paths:
+  /usuarios/cadastro:
+    post:
+      tags:
+        - Usuários
+      summary: Cadastro de usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nome:
+                  type: string
+                email:
+                  type: string
+                senha:
+                  type: string
+              required:
+                - nome
+                - email
+                - senha
+      responses:
+        '201':
+          description: Usuário cadastrado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Falta de campos obrigatórios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email já cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /usuarios/login:
+    post:
+      tags:
+        - Usuários
+      summary: Login de usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                senha:
+                  type: string
+              required:
+                - email
+                - senha
+      responses:
+        '200':
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Campos faltando
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Email ou senha incorretos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /usuarios/updateUsuario:
+    put:
+      tags:
+        - Usuários
+      summary: Atualiza dados do usuário
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                senhaAtual:
+                  type: string
+                novaSenha:
+                  type: string
+                tamanhoFotos:
+                  type: object
+              required:
+                - email
+                - senhaAtual
+      responses:
+        '200':
+          description: Configurações atualizadas com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Input incorreto ou senha atual inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Usuário não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /usuarios/auth:
+    get:
+      tags:
+        - Usuários
+      summary: Verifica token / perfil do usuário autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Acesso concedido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  usuario:
+                    $ref: '#/components/schemas/Usuario'
+        '401':
+          description: Token inválido ou não fornecido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /usuarios/recover-password:
+    post:
+      tags:
+        - Usuários
+      summary: Envio de instruções para recuperação de senha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+              required:
+                - email
+      responses:
+        '200':
+          description: Se o e-mail estiver cadastrado, enviará instruções
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    
+  /usuarios/pix-config:
+    put:
+      tags:
+        - Usuários
+      summary: salvar chave pix
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chave_pix:
+                  type: string
+                nome_empresa:
+                  type: string
+                cidade:
+                  type: string
+              required:
+                - chave_pix
+                - nome_empresa
+                - cidade
+      responses:
+        '200':
+          description: Se o e-mail estiver cadastrado, enviará instruções
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /album/createAlbum:
+    post:
+      tags:
+        - Álbuns
+      summary: Cria novo álbum (com subgrupos e marca-d'água)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                albumName:
+                  type: string
+                subgroups:
+                  type: array
+                  items:
+                    type: string
+                valorDigital:
+                  type: number
+                valorFisica:
+                  type: number
+                position:
+                  type: string
+                  enum:
+                    - desativado
+                    - ativo
+                marca_dagua:
+                  type: string
+                  format: binary
+              required:
+                - albumName
+                - valorDigital
+                - valorFisica
+      responses:
+        '201':
+          description: Álbum criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  albumId:
+                    type: integer
+        '400':
+          description: Erro de validação / erro ao criar álbum
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /album/getAlbums:
+    get:
+      tags:
+        - Álbuns
+      summary: Recupera todos os álbuns do usuário autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de álbuns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Album'
+        '500':
+          description: Erro interno
+
+  /album/deleteAlbum/{id}:
+    delete:
+      tags:
+        - Álbuns
+      summary: Deleta álbum dado ID criptografado
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID criptografado do álbum
+      responses:
+        '200':
+          description: Álbum excluído com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          description: Erro de validação
+        '500':
+          description: Erro interno
+
+  /album/toggleFavorite:
+    post:
+      tags:
+        - Álbuns
+      summary: Alterna se álbum é favoritado
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                albumId:
+                  type: string
+                favoritado:
+                  type: boolean
+              required:
+                - albumId
+                - favoritado
+      responses:
+        '200':
+          description: Estado de favorito atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '500':
+          description: Erro interno
+
+  /album/getAlbum/{id}:
+    get:
+      tags:
+        - Álbuns
+      summary: Recupera álbum específico e seus subálbuns
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Álbum encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  album:
+                    $ref: '#/components/schemas/Album'
+                  subalbuns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SubAlbum'
+        '404':
+          description: Álbum não encontrado
+        '500':
+          description: Erro interno
+
+  /album/createSubAlbum:
+    post:
+      tags:
+        - Álbuns
+      summary: Cria um sub-álbum (subgrupo) dado álbum existente
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                albumId:
+                  type: string
+                subgroupName:
+                  type: string
+              required:
+                - albumId
+                - subgroupName
+      responses:
+        '201':
+          description: Subgrupo criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '500':
+          description: Erro interno
+
+  /album/getSubAlbums:
+    get:
+      tags:
+        - Álbuns
+      summary: Recupera subálbuns dado albumId
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: albumId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de subálbuns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubAlbum'
+        '500':
+          description: Erro interno
+
+  /album/updateSubAlbum:
+    post:
+      tags:
+        - Álbuns
+      summary: Atualiza nome de subálbum
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subAlbumId:
+                  type: integer
+                subgroupName:
+                  type: string
+              required:
+                - subAlbumId
+                - subgroupName
+      responses:
+        '200':
+          description: Subgrupo atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '500':
+          description: Erro interno
+
+  /album/generateShareLink:
+    post:
+      tags:
+        - Álbuns
+      summary: Gera ou recupera link de compartilhamento de álbum ou subálbum
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                albumId:
+                  type: string
+                isSubalbum:
+                  type: boolean
+              required:
+                - albumId
+                - isSubalbum
+      responses:
+        '200':
+          description: Link existente recuperado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareLinkResponse'
+        '201':
+          description: Novo link gerado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareLinkResponse'
+        '500':
+          description: Erro interno
+
+  /album/analises:
+    get:
+      tags:
+        - Álbuns
+      summary: Estatísticas de links temporários por álbum/subálbum
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Métricas sobre links temporários
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  porTipoAlvo:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tipo_alvo:
+                          type: string
+                        quantidade:
+                          type: integer
+                  porExpiracao:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        data:
+                          type: string
+                          format: date
+                        quantidade:
+                          type: integer
+                  ativos:
+                    type: integer
+                  expirados:
+                    type: integer
+                  topAlvos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        alvo_id:
+                          type: integer
+                        quantidade:
+                          type: integer
+        '500':
+          description: Erro interno
+
+  /fotos/upload:
+    post:
+      tags:
+        - Fotos
+      summary: Upload de imagem para álbum/subálbuns
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                albumId:
+                  type: string
+                subalbumIds:
+                  type: array
+                  items:
+                    type: integer
+                fisica:
+                  type: boolean
+                digital:
+                  type: boolean
+                precoDigital:
+                  type: number
+                precoFisica:
+                  type: number
+              required:
+                - image
+                - albumId
+      responses:
+        '200':
+          description: Imagem salva com sucesso
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Formato ou tamanho inválido / falta de arquivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno
+
+  /fotos/getAlbumsPhotos:
+    get:
+      tags:
+        - Fotos
+      summary: Recupera fotos de álbum usando Circuit Breaker
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: albumId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Fotos recuperadas com sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Foto'
+        '400':
+          description: Parâmetros inválidos
+        '500':
+          description: Erro interno
+
+  /fotos/delete/{id}:
+    delete:
+      tags:
+        - Fotos
+      summary: Excluir imagem por ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Imagem excluída com sucesso
+          content:
+            application/json:
+              schema:
+                type: string
+        '403':
+          description: Sem permissão para excluir
+        '404':
+          description: Imagem não encontrada
+        '500':
+          description: Erro interno
+
+  /fotos/update/{id}:
+    put:
+      tags:
+        - Fotos
+      summary: Atualiza metadados da foto (preços, tipo físico/digital, subálbuns)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fisica:
+                  type: boolean
+                digital:
+                  type: boolean
+                precoDigital:
+                  type: number
+                precoFisica:
+                  type: number
+                subalbumIds:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: Imagem atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Imagem não encontrada
+        '403':
+          description: Sem permissão
+        '500':
+          description: Erro interno
+
+  /fotos/shared/{token}:
+    get:
+      tags:
+        - Fotos
+      summary: Acessar fotos via link compartilhado
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Fotos compartilhadas retornadas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Foto'
+        '404':
+          description: Link inválido ou expirado
+        '410':
+          description: Link expirado
+        '500':
+          description: Erro interno
+
+  /fotos/getImageSubalbums/{imageId}:
+    get:
+      tags:
+        - Fotos
+      summary: Retorna os IDs de subálbuns associados a uma imagem
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de IDs de subálbuns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+        '500':
+          description: Erro interno
+
+  /fotos/updatePhoto:
+    put:
+      tags:
+        - Fotos
+      summary: "Atualiza foto: preços, tipo físico/digital e subálbuns"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageId:
+                  type: integer
+                fisica:
+                  type: boolean
+                digital:
+                  type: boolean
+                precoDigital:
+                  type: number
+                precoFisica:
+                  type: number
+                subalbumIds:
+                  type: array
+                  items:
+                    type: integer
+              required:
+                - imageId
+      responses:
+        '200':
+          description: Imagem atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '500':
+          description: Erro interno
+
+  /fotos/favoritePhoto:
+    put:
+      tags:
+        - Fotos
+      summary: Marca uma foto como favorita dentro do álbum
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageId:
+                  type: integer
+              required:
+                - imageId
+      responses:
+        '200':
+          description: Imagem favoritada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '500':
+          description: Erro interno
+
+  /fotos/favoritePhoto/{albumId}:
+    get:
+      tags:
+        - Fotos
+      summary: Recupera a foto favorita de um álbum
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: albumId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Retorna foto favorita
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Foto'
+        '404':
+          description: Nenhuma imagem favoritada encontrada
+        '500':
+          description: Erro interno
+
+  /orcamentos/enviar:
+    post:
+      tags:
+        - Orçamentos
+      summary: Enviar orçamento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrcamentoRequest'
+      responses:
+        '200':
+          description: Orçamento enviado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Erro no envio do orçamento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

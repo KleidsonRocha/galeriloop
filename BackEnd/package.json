@@ -21,6 +21,8 @@
     "nodemailer": "^7.0.2",
     "opossum": "^8.4.0",
     "pix-qrcode": "^1.0.0",
-    "sharp": "^0.34.1"
+    "sharp": "^0.34.1",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
   }
 }
