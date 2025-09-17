@@ -13,20 +13,20 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Dimensions
 } from 'react-native';
 
 import Footer from '../../components/templates/Footer';
 import Header from '../../components/templates/Header';
-import Modal from '../../components/templates/Modal';
+import Modal from '../../components/templates/Modal'; // Assumindo que este Modal é um wrapper simples
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Cores e tamanhos comuns para fácil manutenção
 const COLORS = {
   primary: '#1E3653',
   secondary: '#2A4B7C',
-  accent: '#FFD700', // Gold for favorites
+  accent: '#FFD700', 
   background: '#F0F2F5',
   cardBackground: '#FFFFFF',
   textPrimary: '#333333',
@@ -915,244 +915,248 @@ const AlbumDetails = () => {
 
         {/* Modal de adicionar imagem ao álbum */}
         <Modal isOpen={modalAlbum} onClose={() => setModalAlbum(false)}>
-          {/* CORREÇÃO APLICADA AQUI: Adicionado ScrollView para evitar overflow */}
-          <ScrollView contentContainerStyle={styles.modalAddImageContainer}>
-            <Text style={styles.modalTitle}>Adicionar Imagem ao Álbum</Text>
-            <View style={styles.imageUploadContainer}>
-              <Text style={styles.imageUploadLabel}>
-                Selecione a Imagem:
-              </Text>
-              <TouchableOpacity onPress={handleImageChange} style={styles.imageUploadButton}>
-                <Text style={styles.imageUploadButtonText}>Selecionar Imagem</Text>
-              </TouchableOpacity>
-              {previewImage && (
-                <View style={styles.imageUploadPreviewWrapper}>
-                  <TouchableOpacity onPress={handlePreviewClick}>
-                    <Image
-                      source={{ uri: previewImage }}
-                      alt="Preview"
-                      style={styles.imageUploadPreview}
-                      resizeMode="contain"
-                    />
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-            <View style={styles.subalbumSelectorContainer}>
-              <Text style={styles.imageSubAlbumLabel}>
-                Adicionar aos Subálbuns:
-              </Text>
-              <MultiSelectSubalbums
-                options={subalbumOptions}
-                selectedValues={selectedSubalbuns}
-                onSelectionChange={setSelectedSubalbuns}
-                disabled={isLoading}
-              />
-            </View>
-            <View style={styles.mediaOptionsContainer}>
-              <Text style={styles.mediaOptionsLabel}>Opções de Mídia:</Text>
-              <View style={styles.mediaOptionsList}>
-                <View style={styles.mediaOptionItem}>
-                  <TouchableOpacity
-                    style={styles.checkboxContainer}
-                    onPress={() => setIsDigital(!isDigital)}
-                    disabled={isLoading}
-                  >
-                    <View style={[styles.checkbox, isDigital && styles.checkboxChecked]}>
-                      {isDigital && <MaterialIcons name="check" size={16} color="white" />}
-                    </View>
-                    <Text style={styles.checkboxLabel}>Mídia Digital</Text>
-                  </TouchableOpacity>
-
-                  {isDigital && (
-                    <View style={styles.mediaPriceField}>
-                      <Text style={styles.mediaPriceLabel}>Preço Digital:</Text>
-                      <TextInput
-                        style={styles.priceInput}
-                        keyboardType="numeric"
-                        value={precoDigital !== null ? String(precoDigital) : String(album?.preco_digital_padrao || 0)}
-                        onChangeText={text => setPrecoDigital(parseFloat(text) || 0)}
-                        editable={!isLoading}
-                        placeholderTextColor={COLORS.textSecondary}
+          {/* CORREÇÃO APLICADA AQUI: O ScrollView agora está dentro de um wrapper para gerenciar altura */}
+          <View style={styles.modalAddImageWrapper}>
+            <ScrollView style={styles.modalAddImageScrollView} contentContainerStyle={styles.modalAddImageScrollViewContent}>
+              <Text style={styles.modalTitle}>Adicionar Imagem ao Álbum</Text>
+              <View style={styles.imageUploadContainer}>
+                <Text style={styles.imageUploadLabel}>
+                  Selecione a Imagem:
+                </Text>
+                <TouchableOpacity onPress={handleImageChange} style={styles.imageUploadButton}>
+                  <Text style={styles.imageUploadButtonText}>Selecionar Imagem</Text>
+                </TouchableOpacity>
+                {previewImage && (
+                  <View style={styles.imageUploadPreviewWrapper}>
+                    <TouchableOpacity onPress={handlePreviewClick}>
+                      <Image
+                        source={{ uri: previewImage }}
+                        alt="Preview"
+                        style={styles.imageUploadPreview}
+                        resizeMode="contain"
                       />
-                    </View>
-                  )}
-                </View>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              <View style={styles.subalbumSelectorContainer}>
+                <Text style={styles.imageSubAlbumLabel}>
+                  Adicionar aos Subálbuns:
+                </Text>
+                <MultiSelectSubalbums
+                  options={subalbumOptions}
+                  selectedValues={selectedSubalbuns}
+                  onSelectionChange={setSelectedSubalbuns}
+                  disabled={isLoading}
+                />
+              </View>
+              <View style={styles.mediaOptionsContainer}>
+                <Text style={styles.mediaOptionsLabel}>Opções de Mídia:</Text>
+                <View style={styles.mediaOptionsList}>
+                  <View style={styles.mediaOptionItem}>
+                    <TouchableOpacity
+                      style={styles.checkboxContainer}
+                      onPress={() => setIsDigital(!isDigital)}
+                      disabled={isLoading}
+                    >
+                      <View style={[styles.checkbox, isDigital && styles.checkboxChecked]}>
+                        {isDigital && <MaterialIcons name="check" size={16} color="white" />}
+                      </View>
+                      <Text style={styles.checkboxLabel}>Mídia Digital</Text>
+                    </TouchableOpacity>
 
-                <View style={styles.mediaOptionItem}>
-                  <TouchableOpacity
-                    style={styles.checkboxContainer}
-                    onPress={() => setIsFisica(!isFisica)}
-                    disabled={isLoading}
-                  >
-                    <View style={[styles.checkbox, isFisica && styles.checkboxChecked]}>
-                      {isFisica && <MaterialIcons name="check" size={16} color="white" />}
-                    </View>
-                    <Text style={styles.checkboxLabel}>Mídia Física</Text>
-                  </TouchableOpacity>
+                    {isDigital && (
+                      <View style={styles.mediaPriceField}>
+                        <Text style={styles.mediaPriceLabel}>Preço Digital:</Text>
+                        <TextInput
+                          style={styles.priceInput}
+                          keyboardType="numeric"
+                          value={precoDigital !== null ? String(precoDigital) : String(album?.preco_digital_padrao || 0)}
+                          onChangeText={text => setPrecoDigital(parseFloat(text) || 0)}
+                          editable={!isLoading}
+                          placeholderTextColor={COLORS.textSecondary}
+                        />
+                      </View>
+                    )}
+                  </View>
 
-                  {isFisica && (
-                    <View style={styles.mediaPriceField}>
-                      <Text style={styles.mediaPriceLabel}>Preço Físico:</Text>
-                      <TextInput
-                        style={styles.priceInput}
-                        keyboardType="numeric"
-                        value={precoFisica !== null ? String(precoFisica) : String(album?.preco_fisica_padrao || 0)}
-                        onChangeText={text => setPrecoFisica(parseFloat(text) || 0)}
-                        editable={!isLoading}
-                        placeholderTextColor={COLORS.textSecondary}
-                      />
-                    </View>
-                  )}
+                  <View style={styles.mediaOptionItem}>
+                    <TouchableOpacity
+                      style={styles.checkboxContainer}
+                      onPress={() => setIsFisica(!isFisica)}
+                      disabled={isLoading}
+                    >
+                      <View style={[styles.checkbox, isFisica && styles.checkboxChecked]}>
+                        {isFisica && <MaterialIcons name="check" size={16} color="white" />}
+                      </View>
+                      <Text style={styles.checkboxLabel}>Mídia Física</Text>
+                    </TouchableOpacity>
+
+                    {isFisica && (
+                      <View style={styles.mediaPriceField}>
+                        <Text style={styles.mediaPriceLabel}>Preço Físico:</Text>
+                        <TextInput
+                          style={styles.priceInput}
+                          keyboardType="numeric"
+                          value={precoFisica !== null ? String(precoFisica) : String(album?.preco_fisica_padrao || 0)}
+                          onChangeText={text => setPrecoFisica(parseFloat(text) || 0)}
+                          editable={!isLoading}
+                          placeholderTextColor={COLORS.textSecondary}
+                        />
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
-            <View style={styles.modalFormActions}>
-              <TouchableOpacity
-                style={[styles.modalFormButtonCancel, isLoading && styles.modalFormButtonDisabled]}
-                onPress={() => setModalAlbum(false)}
-                disabled={isLoading}
-              >
-                <Text style={styles.modalFormButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalFormButtonSubmit, (isLoading || !image) && styles.modalFormButtonDisabled]}
-                onPress={handleImageUpload}
-                disabled={isLoading || !image}
-              >
-                {isLoading ? <ActivityIndicator size="small" color="white" /> : <Text style={styles.modalFormButtonText}>Enviar Imagem</Text>}
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+              <View style={styles.modalFormActions}>
+                <TouchableOpacity
+                  style={[styles.modalFormButtonCancel, isLoading && styles.modalFormButtonDisabled]}
+                  onPress={() => setModalAlbum(false)}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.modalFormButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalFormButtonSubmit, (isLoading || !image) && styles.modalFormButtonDisabled]}
+                  onPress={handleImageUpload}
+                  disabled={isLoading || !image}
+                >
+                  {isLoading ? <ActivityIndicator size="small" color="white" /> : <Text style={styles.modalFormButtonText}>Enviar Imagem</Text>}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
         </Modal>
 
         {/* Modal de edição de imagem */}
         <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)}>
-          {/* CORREÇÃO APLICADA AQUI: Adicionado ScrollView para evitar overflow */}
-          <ScrollView contentContainerStyle={styles.editImageModalContainer}>
-            <Text style={styles.modalTitle}>Editar Imagem</Text>
+          {/* CORREÇÃO APLICADA AQUI: O ScrollView agora está dentro de um wrapper para gerenciar altura */}
+          <View style={styles.modalEditImageWrapper}>
+            <ScrollView style={styles.modalEditImageScrollView} contentContainerStyle={styles.modalEditImageScrollViewContent}>
+              <Text style={styles.modalTitle}>Editar Imagem</Text>
 
-            {selectedImage && (
-              <>
-                <View style={styles.editImagePreviewContainer}>
-                  <Image
-                    source={{ uri: getImageUrl(selectedImage) }}
-                    alt={selectedImage.nome || 'Imagem do álbum'}
-                    style={styles.editImagePreview}
-                    resizeMode="contain"
-                  />
-                </View>
+              {selectedImage && (
+                <>
+                  <View style={styles.editImagePreviewContainer}>
+                    <Image
+                      source={{ uri: getImageUrl(selectedImage) }}
+                      alt={selectedImage.nome || 'Imagem do álbum'}
+                      style={styles.editImagePreview}
+                      resizeMode="contain"
+                    />
+                  </View>
 
-                <View style={styles.editImageFormContainer}>
-                  <View style={styles.mediaOptionsContainer}>
-                    <Text style={styles.mediaOptionsLabel}>Opções de Mídia:</Text>
-                    <View style={styles.mediaOptionsList}>
-                      <View style={styles.mediaOptionItem}>
-                        <TouchableOpacity
-                          style={styles.checkboxContainer}
-                          onPress={() => setEditIsDigital(!editIsDigital)}
-                          disabled={isLoading}
-                        >
-                          <View style={[styles.checkbox, editIsDigital && styles.checkboxChecked]}>
-                            {editIsDigital && <MaterialIcons name="check" size={16} color="white" />}
-                          </View>
-                          <Text style={styles.checkboxLabel}>Mídia Digital</Text>
-                        </TouchableOpacity>
+                  <View style={styles.editImageFormContainer}>
+                    <View style={styles.mediaOptionsContainer}>
+                      <Text style={styles.mediaOptionsLabel}>Opções de Mídia:</Text>
+                      <View style={styles.mediaOptionsList}>
+                        <View style={styles.mediaOptionItem}>
+                          <TouchableOpacity
+                            style={styles.checkboxContainer}
+                            onPress={() => setEditIsDigital(!editIsDigital)}
+                            disabled={isLoading}
+                          >
+                            <View style={[styles.checkbox, editIsDigital && styles.checkboxChecked]}>
+                              {editIsDigital && <MaterialIcons name="check" size={16} color="white" />}
+                            </View>
+                            <Text style={styles.checkboxLabel}>Mídia Digital</Text>
+                          </TouchableOpacity>
 
-                        {editIsDigital && (
-                          <View style={styles.mediaPriceField}>
-                            <Text style={styles.mediaPriceLabel}>Preço Digital:</Text>
-                            <TextInput
-                              style={styles.priceInput}
-                              keyboardType="numeric"
-                              value={editPrecoDigital !== null ? String(editPrecoDigital) : String(album?.preco_digital_padrao || 0)}
-                              onChangeText={text => setEditPrecoDigital(parseFloat(text) || 0)}
-                              editable={!isLoading}
-                              placeholderTextColor={COLORS.textSecondary}
-                            />
-                          </View>
-                        )}
-                      </View>
+                          {editIsDigital && (
+                            <View style={styles.mediaPriceField}>
+                              <Text style={styles.mediaPriceLabel}>Preço Digital:</Text>
+                              <TextInput
+                                style={styles.priceInput}
+                                keyboardType="numeric"
+                                value={editPrecoDigital !== null ? String(editPrecoDigital) : String(album?.preco_digital_padrao || 0)}
+                                onChangeText={text => setEditPrecoDigital(parseFloat(text) || 0)}
+                                editable={!isLoading}
+                                placeholderTextColor={COLORS.textSecondary}
+                              />
+                            </View>
+                          )}
+                        </View>
 
-                      <View style={styles.mediaOptionItem}>
-                        <TouchableOpacity
-                          style={styles.checkboxContainer}
-                          onPress={() => setEditIsFisica(!editIsFisica)}
-                          disabled={isLoading}
-                        >
-                          <View style={[styles.checkbox, editIsFisica && styles.checkboxChecked]}>
-                            {editIsFisica && <MaterialIcons name="check" size={16} color="white" />}
-                          </View>
-                          <Text style={styles.checkboxLabel}>Mídia Física</Text>
-                        </TouchableOpacity>
+                        <View style={styles.mediaOptionItem}>
+                          <TouchableOpacity
+                            style={styles.checkboxContainer}
+                            onPress={() => setEditIsFisica(!editIsFisica)}
+                            disabled={isLoading}
+                          >
+                            <View style={[styles.checkbox, editIsFisica && styles.checkboxChecked]}>
+                              {editIsFisica && <MaterialIcons name="check" size={16} color="white" />}
+                            </View>
+                            <Text style={styles.checkboxLabel}>Mídia Física</Text>
+                          </TouchableOpacity>
 
-                        {editIsFisica && (
-                          <View style={styles.mediaPriceField}>
-                            <Text style={styles.mediaPriceLabel}>Preço Físico:</Text>
-                            <TextInput
-                              style={styles.priceInput}
-                              keyboardType="numeric"
-                              value={editPrecoFisica !== null ? String(editPrecoFisica) : String(album?.preco_fisica_padrao || 0)}
-                              onChangeText={text => setEditPrecoFisica(parseFloat(text) || 0)}
-                              editable={!isLoading}
-                              placeholderTextColor={COLORS.textSecondary}
-                            />
-                          </View>
-                        )}
+                          {editIsFisica && (
+                            <View style={styles.mediaPriceField}>
+                              <Text style={styles.mediaPriceLabel}>Preço Físico:</Text>
+                              <TextInput
+                                style={styles.priceInput}
+                                keyboardType="numeric"
+                                value={editPrecoFisica !== null ? String(editPrecoFisica) : String(album?.preco_fisica_padrao || 0)}
+                                onChangeText={text => setEditPrecoFisica(parseFloat(text) || 0)}
+                                editable={!isLoading}
+                                placeholderTextColor={COLORS.textSecondary}
+                              />
+                            </View>
+                          )}
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  <View style={styles.subalbumSelectorContainer}>
-                    <Text style={styles.imageSubAlbumLabel}>Subálbuns da Imagem:</Text>
-                    <MultiSelectSubalbums
-                      options={allSubalbumOptions}
-                      selectedValues={selectedImageSubalbuns.map(item => item.value)}
-                      onSelectionChange={(newSelection) => {
-                        const newSelectedImageSubalbuns = newSelection.map(value => ({
-                          value,
-                          label: allSubalbumOptions.find(opt => opt.value === value)?.label || `Subálbum ${value}`
-                        }));
-                        setSelectedImageSubalbuns(newSelectedImageSubalbuns);
-                      }}
-                      disabled={isLoading}
-                    />
-                    <Text style={styles.subalbunsHelpText}>
-                      Selecione os subálbuns em que esta imagem deve aparecer.
-                    </Text>
-                  </View>
+                    <View style={styles.subalbumSelectorContainer}>
+                      <Text style={styles.imageSubAlbumLabel}>Subálbuns da Imagem:</Text>
+                      <MultiSelectSubalbums
+                        options={allSubalbumOptions}
+                        selectedValues={selectedImageSubalbuns.map(item => item.value)}
+                        onSelectionChange={(newSelection) => {
+                          const newSelectedImageSubalbuns = newSelection.map(value => ({
+                            value,
+                            label: allSubalbumOptions.find(opt => opt.value === value)?.label || `Subálbum ${value}`
+                          }));
+                          setSelectedImageSubalbuns(newSelectedImageSubalbuns);
+                        }}
+                        disabled={isLoading}
+                      />
+                      <Text style={styles.subalbunsHelpText}>
+                        Selecione os subálbuns em que esta imagem deve aparecer.
+                      </Text>
+                    </View>
 
-                  <View style={styles.modalFormActions}>
-                    <TouchableOpacity
-                      style={[styles.modalFormButtonSubmit, isLoading && styles.modalFormButtonDisabled]}
-                      onPress={handleFavoriteImage}
-                      disabled={isLoading || !selectedImage}
-                    >
-                      <Text style={styles.modalFormButtonText}>Favoritar Imagem</Text>
-                    </TouchableOpacity>
+                    <View style={styles.modalFormActions}>
+                      <TouchableOpacity
+                        style={[styles.modalFormButtonSubmit, isLoading && styles.modalFormButtonDisabled]}
+                        onPress={handleFavoriteImage}
+                        disabled={isLoading || !selectedImage}
+                      >
+                        <Text style={styles.modalFormButtonText}>Favoritar Imagem</Text>
+                      </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={[styles.modalFormButtonDelete, isLoading && styles.modalFormButtonDisabled]}
-                      onPress={() => setDeleteConfirmation(true)}
-                      disabled={isLoading}
-                    >
-                      <Text style={styles.modalFormButtonText}>Excluir Imagem</Text>
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalFormButtonDelete, isLoading && styles.modalFormButtonDisabled]}
+                        onPress={() => setDeleteConfirmation(true)}
+                        disabled={isLoading}
+                      >
+                        <Text style={styles.modalFormButtonText}>Excluir Imagem</Text>
+                      </TouchableOpacity>
+                    </View>
+                  
+                    <View style={styles.modalFormActions}>
+                      <TouchableOpacity
+                        style={[styles.modalFormButtonSubmit, isLoading && styles.modalFormButtonDisabled]}
+                        onPress={handleUpdateImage}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? <ActivityIndicator size="small" color="white" /> : <Text style={styles.modalFormButtonText}>Salvar Alterações</Text>}
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                
-                  <View style={styles.modalFormActions}>
-                    <TouchableOpacity
-                      style={[styles.modalFormButtonSubmit, isLoading && styles.modalFormButtonDisabled]}
-                      onPress={handleUpdateImage}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? <ActivityIndicator size="small" color="white" /> : <Text style={styles.modalFormButtonText}>Salvar Alterações</Text>}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </>
-            )}
-          </ScrollView>
+                </>
+              )}
+            </ScrollView>
+          </View>
         </Modal>
 
         {/* Modal de confirmação de exclusão */}
@@ -1183,10 +1187,10 @@ const AlbumDetails = () => {
 
         {/* Modal de links de compartilhamento */}
         <Modal isOpen={shareLinkModalOpen} onClose={() => setShareLinkModalOpen(false)}>
-          <View style={styles.shareLinksModalContainer}>
+          <View style={styles.shareLinksModalWrapper}>
             <Text style={styles.modalTitle}>Links de Acesso ao Álbum</Text>
 
-            <ScrollView style={styles.shareLinksContent}>
+            <ScrollView style={styles.shareLinksScrollView} contentContainerStyle={styles.shareLinksContentContainer}>
               {albumLink && (
                 <View style={[styles.shareLinkItem, albumLink.isNew ? styles.newLink : styles.existingLink]}>
                   <View style={styles.shareLinkHeader}>
@@ -1310,8 +1314,23 @@ const AlbumDetails = () => {
   );
 };
 
+// Estilos base para os wrappers dos modais
+const modalWrapperBase = {
+  width: '100%',
+  alignSelf: 'center',
+  backgroundColor: COLORS.cardBackground,
+  borderRadius: BORDER_RADIUS.large,
+  ...SHADOWS.large,
+};
 
-// CORREÇÃO APLICADA AQUI: Estilos dos modais ajustados
+// Estilos base para o contentContainerStyle dos ScrollViews dentro dos modais
+const modalScrollContentBase = {
+  flexGrow: 1,
+  paddingHorizontal: SPACING.medium,
+  paddingBottom: SPACING.medium,
+};
+
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1561,31 +1580,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Modals
+  // Estilos comuns para títulos e textos de modais
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: COLORS.primary,
     marginBottom: SPACING.large,
     textAlign: 'center',
+    paddingHorizontal: SPACING.medium, // Garante padding para o título dentro do modal
   },
   modalText: {
     fontSize: 16,
     color: COLORS.textPrimary,
     textAlign: 'center',
     marginBottom: SPACING.medium,
+    paddingHorizontal: SPACING.medium, // Garante padding para o texto dentro do modal
   },
 
-  // Modal SubAlbum
+  // Modal SubAlbum (Conteúdo simples, não exige ScrollView interno)
   modalSubAlbumContainer: {
-    padding: SPACING.medium,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: BORDER_RADIUS.large,
-    width: '90%',
-    maxWidth: 400,
-    maxHeight: '70%',
-    alignSelf: 'center',
-    ...SHADOWS.large,
+    ...modalWrapperBase,
+    maxWidth: 900,
+    maxHeight: '80%',
+    padding: SPACING.medium, // Padding aplicado diretamente ao container do modal
   },
   modalSubAlbumForm: {
     width: '100%',
@@ -1633,15 +1650,18 @@ const styles = StyleSheet.create({
   },
 
   // Modal Add Image
-  modalAddImageContainer: {
-    padding: SPACING.medium,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: BORDER_RADIUS.large,
-    width: '90%',
-    maxWidth: 450,
-    maxHeight: '80%',
-    alignSelf: 'center',
-    ...SHADOWS.large,
+  modalAddImageWrapper: { // Wrapper principal do modal de adicionar imagem
+    ...modalWrapperBase,
+    maxWidth: 950,
+    maxHeight: '100%',
+    flex: 1, // Permite que o wrapper preencha a altura disponível
+    paddingVertical: SPACING.medium, // Padding vertical do wrapper
+  },
+  modalAddImageScrollView: { // Estilo para o componente ScrollView
+    flex: 1, // Permite que o ScrollView ocupe o espaço restante
+  },
+  modalAddImageScrollViewContent: { // Estilo para o contentContainerStyle do ScrollView
+    ...modalScrollContentBase,
   },
   imageUploadContainer: {
     alignItems: 'center',
@@ -1800,16 +1820,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // Edit Image Modal
-  editImageModalContainer: {
-    padding: SPACING.medium,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: BORDER_RADIUS.large,
-    width: '90%',
-    maxWidth: 450,
-    maxHeight: '80%',
-    alignSelf: 'center',
-    ...SHADOWS.large,
+  //editar aqui o valor
+  modalEditImageWrapper: { // Wrapper principal do modal de edição de imagem
+    ...modalWrapperBase,
+    maxWidth: 1550,
+    maxHeight: '100%',
+    flex: 1,
+    paddingVertical: SPACING.medium,
+  },
+  modalEditImageScrollView: { // Estilo para o componente ScrollView
+    flex: 1,
+  },
+  modalEditImageScrollViewContent: { // Estilo para o contentContainerStyle do ScrollView
+    ...modalScrollContentBase,
   },
   editImagePreviewContainer: {
     alignItems: 'center',
@@ -1833,15 +1856,11 @@ const styles = StyleSheet.create({
   },
 
   // Delete Confirmation Modal
-  deleteConfirmationContainer: {
-    padding: SPACING.medium,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: BORDER_RADIUS.large,
-    width: '90%',
-    maxWidth: 350,
+  deleteConfirmationContainer: { // Container direto para o modal de confirmação
+    ...modalWrapperBase,
+    maxWidth: 550,
     maxHeight: '60%',
-    alignSelf: 'center',
-    ...SHADOWS.large,
+    padding: SPACING.medium, // Padding aplicado diretamente ao container
   },
   deleteConfirmationActions: {
     flexDirection: 'row',
@@ -1851,19 +1870,25 @@ const styles = StyleSheet.create({
   },
 
   // Share Links Modal
-  shareLinksModalContainer: {
-    padding: SPACING.medium,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: BORDER_RADIUS.large,
-    width: '90%',
-    maxWidth: 500,
-    maxHeight: '75%',
-    alignSelf: 'center',
-    ...SHADOWS.large,
+  shareLinksModalWrapper: { // Wrapper principal do modal de links
+    ...modalWrapperBase,
+    maxWidth: 900,
+    maxHeight: '85%',
+    flexDirection: 'column', // Para que o ScrollView e o Footer se organizem verticalmente
+    padding: SPACING.medium, // Padding geral para todo o conteúdo do modal
+  },
+  shareLinksScrollView: { // Estilo para o componente ScrollView
+    flex: 1, // Ocupa o espaço vertical disponível
+  },
+  shareLinksContentContainer: { // Estilo para o contentContainerStyle do ScrollView
+    paddingVertical: SPACING.small, // Pequeno padding interno para o conteúdo rolável
+  },
+  shareLinksFooter: {
+    marginTop: SPACING.medium, // Espaçamento acima do rodapé
+    alignItems: 'center',
   },
   shareLinksContent: {
-    marginBottom: SPACING.medium,
-    maxHeight: 400,
+    // Este estilo não é mais usado diretamente no ScrollView, mas pode ser removido ou realocado se necessário
   },
   shareLinkItem: {
     backgroundColor: COLORS.background,
@@ -2031,5 +2056,3 @@ const styles = StyleSheet.create({
 });
 
 export default AlbumDetails;
-
-
