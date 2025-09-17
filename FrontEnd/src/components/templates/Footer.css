@@ -1,0 +1,18 @@
+.about-footer {
+  background-color: #1e3653;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+}
+
+.footer-text {
+  margin: 0;
+  padding: 0.5rem;
+  color: #ffffff;
+  font-family: 'Inconsolata', monospace;
+  font-size: 0.75rem;
+  font-weight: 400;
+}

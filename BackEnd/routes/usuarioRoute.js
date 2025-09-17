@@ -233,5 +233,54 @@ router.post('/recover-password', async (req, res) => {
   }
 });
 
+// VERSÃO 1: Busca dados Pix do banco
+router.get('/pix-config', verificarToken, async (req, res) => {
+  let connection;
+  try {
+    connection = await req.pool.getConnection();
+    const [rows] = await connection.execute(
+      'SELECT chave_pix, nome_empresa, cidade FROM usuarios WHERE id = ?', 
+      [req.usuario.id],
+    );
+    if (rows.length === 0) return res.status(404).json({ message: 'Usuário não encontrado' });
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar dados Pix', error: error.message });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Atualiza dados Pix do usuário autenticado
+router.put('/pix-config', verificarToken, async (req, res) => {
+  const { chave_pix, nome_empresa, cidade } = req.body;
+  if (!chave_pix || !nome_empresa || !cidade) {
+    return res.status(400).json({ message: 'Todos os campos do Pix são obrigatórios.' });
+  }
+  let connection;
+  try {
+    connection = await req.pool.getConnection();
+    await connection.execute(
+      'UPDATE usuarios SET chave_pix = ?, nome_empresa = ?, cidade = ? WHERE id = ?',
+      [chave_pix, nome_empresa, cidade, req.usuario.id]
+    );
+    res.json({ message: 'Dados Pix atualizados com sucesso.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao atualizar dados Pix', error: error.message });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+/* VERSÃO 2: Dados Pix fixos para teste
+router.get('/pix-config', verificarToken, (req, res) => {
+  console.log("entrou na rota pix-config");
+  res.json({
+    chave_pix: 'matheuswastchuk@gmail.com',
+    nome_empresa: 'Galeriloop',
+
+    cidade: 'ERECHIM'
+  });
+});*/
 
 module.exports = router;

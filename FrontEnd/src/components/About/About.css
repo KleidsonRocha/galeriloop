@@ -1,0 +1,156 @@
+.about {
+    background-color: #e3e2de;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+    padding-bottom: 2rem;
+  }
+  
+  .about-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+  
+  .about-columns {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 80rem;
+    gap: 6rem;
+  }
+  
+  .about-info {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+
+  }
+  
+  .about-logo {
+    width: 25rem;
+    height: auto;
+    margin: 0 auto 0;
+  }
+  
+  .about-title {
+    color: #1e3653;
+    font-family: "Inconsolata-ExtraBold", Helvetica;
+    font-size: 3rem;
+    font-weight: 600;
+    letter-spacing: 0.8rem;
+    line-height: 1.2;
+    margin: 0;
+  }
+  
+  .about-description {
+    color: #1e3653;
+    font-family: "Inconsolata-SemiBold", Helvetica;
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.5;
+    max-width: 100%;
+  }
+  
+  .about-screens {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+  }
+  
+  .screen-svg {
+    width: 25rem;
+    height: 25rem;
+    object-fit: contain;
+    border-radius: 0.5rem;
+  }
+  
+  .about-footer {
+    background-color: #1e3653;
+    width: 100%;
+    text-align: left;
+    padding: 0;
+  }
+  
+  .footer-text {
+    margin: 0;
+    padding: 0.5rem;
+    color: #ffffff;
+    font-family: "Inconsolata-Regular", Helvetica;
+    font-size: 0.75rem;
+    font-weight: 400;
+  }
+
+  /* Media Queries para responsividade */
+  @media screen and (max-width: 1024px) {
+    .about-columns {
+      max-width: 90%;
+      gap: 4rem;
+    }
+
+    .about-logo {
+      width: 20rem;
+    }
+
+    .screen-svg {
+      width: 18rem;
+      height: 18rem;
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .about-columns {
+      flex-direction: column;
+      gap: 3rem;
+    }
+
+    .about-logo {
+      width: 15rem;
+    }
+
+    .about-title {
+      font-size: 2.5rem;
+      letter-spacing: 0.6rem;
+    }
+
+    .about-description {
+      font-size: 1rem;
+    }
+
+    .screen-svg {
+      width: 12rem;
+      height: 12rem;
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .about-content {
+      padding: 1rem;
+    }
+
+    .about-logo {
+      width: 10rem;
+    }
+
+    .about-title {
+      font-size: 2rem;
+      letter-spacing: 0.4rem;
+    }
+
+    .about-description {
+      font-size: 0.9rem;
+    }
+
+    .screen-svg {
+      width: 8rem;
+      height: 8rem;
+    }
+  }
