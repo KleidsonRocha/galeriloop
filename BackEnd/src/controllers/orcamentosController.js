@@ -12,14 +12,15 @@ const enviarOrcamento = async (req, res) => {
   let connection;
   try {
     connection = await req.pool.getConnection();
-    const { cliente, itens, total, albumId, subalbumId } = req.body;
+  const { cliente, itens, total, albumId, subalbumId, paymentType } = req.body;
 
     console.log('Parâmetros recebidos:', {
       cliente,
       itens,
       total,
       albumId,
-      subalbumId
+      subalbumId,
+      paymentType
     });
 
     // Buscar dados do álbum e do fotógrafo
@@ -108,6 +109,15 @@ const enviarOrcamento = async (req, res) => {
       `
     };
 
+    // Frase de acordo com o tipo de pagamento
+    let paymentPhrase = '';
+    const normalizedPaymentType = (paymentType || '').toLowerCase();
+    if (normalizedPaymentType === 'pix') {
+      paymentPhrase = 'O cliente decidiu realizar o pagamento por PIX, ao entrar em contato solicite o comprovante do envio.';
+    } else if (normalizedPaymentType === 'presencial') {
+      paymentPhrase = 'O cliente decidiu realizar o pagamento de maneira presencial na retirada das fotos, organize o mesmo ao entrar em contato.';
+    }
+
     // Email para o fotógrafo
     const mailOptionsFotografo = {
       from: process.env.EMAIL_USER,
@@ -153,6 +163,9 @@ const enviarOrcamento = async (req, res) => {
             </div>
             <p style="font-size: 1rem; margin: 30px 0 18px 0; color: #45516d;">
               Por favor, entre em contato com o cliente para finalizar a negociação.
+            </p>
+            <p style="font-size: 1rem; margin: 18px 0 18px 0; color: #1e3653; font-weight: bold;">
+              ${paymentPhrase}
             </p>
             <div style="margin-top:30px; margin-bottom:12px; text-align: center;">
               <span style="display:inline-block; background: #1e3653; color:#e3e2de; padding:12px 30px; border-radius:8px; font-weight:700; font-size:1rem;">Equipe Galeriloop</span>

@@ -11,6 +11,8 @@ import { FaTrash, FaLock } from "react-icons/fa";
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 const SharedAlbum = () => {
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
+  const [summaryModalContent, setSummaryModalContent] = useState({ success: true, message: '', items: [], total: 0 });
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const [pixPayload, setPixPayload] = useState("");
   const [pixLoading, setPixLoading] = useState(false);
@@ -33,9 +35,8 @@ const SharedAlbum = () => {
   const [contactTouched, setContactTouched] = useState(false);
   const [securityEnabled, setSecurityEnabled] = useState(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-const [paymentType, setPaymentType] = useState(null); // 'pix' ou 'presencial'
-const [canSendBudget, setCanSendBudget] = useState(true);
-const [pixTimer, setPixTimer] = useState(0);
+  const [paymentType, setPaymentType] = useState(null); // 'pix' ou 'presencial'
+  const [pixTimer, setPixTimer] = useState(0); // segundos restantes para liberar orçamento
   const imageRefs = useRef({});
   const isValidEmail = (email) => /.+@.+\..+/.test(email);
   const isContactValid =
@@ -202,23 +203,43 @@ const [pixTimer, setPixTimer] = useState(0);
     [contactInfo]
   );
 
-  const handleOpenPaymentModal = () => {
-  setPaymentModalOpen(true);
-  setPaymentType(null);
-};
+    // Modal de escolha de pagamento
+    const handleOpenPaymentModal = () => {
+      setPaymentModalOpen(true);
+      setPaymentType(null);
+    };
 
-const handleSelectPayment = (type) => {
-  setPaymentType(type);
-  setPaymentModalOpen(false);
+    // Seleção do tipo de pagamento
+    const handleSelectPayment = async (type) => {
+      setPaymentType(type);
+      setPaymentModalOpen(false);
+      if (type === 'pix') {
+        await handleShowPix();
+        setPixTimer(10); // 10 segundos para evitar cliques automáticos
+      } else {
+        setPixTimer(0);
+        // Envia orçamento automaticamente para presencial
+        setTimeout(() => {
+          handleSendBudget();
+        }, 15); // pequeno delay para fechar modal antes de enviar
+      }
+    };
 
-  if (type === 'pix') {
-    setCanSendBudget(false);
-    setPixTimer(300); // 5 minutos
-    handleShowPix(); // sua função que gera o QR Code Pix
-  } else {
-    setCanSendBudget(true);
-  }
-};
+    // Timer Pix
+    useEffect(() => {
+      if (pixTimer > 0) {
+        const interval = setInterval(() => {
+          setPixTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(interval);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(interval);
+      }
+    }, [pixTimer]);
 
   const getImageUrl = (image) => {
     if (!image) return "";
@@ -341,23 +362,31 @@ const handleSelectPayment = (type) => {
   };
 
   const handleSendBudget = async () => {
+    if (paymentType === 'pix' && pixTimer > 0) {
+      return;
+    }
     if (!contactInfo || !albumData) return;
+    const itemsResumo = cart.map((item) => ({
+      id: item.id,
+      nome: item.nome,
+      tipo_midia: item.tipo_midia,
+      quantidade: item.qty,
+      preco_unitario: item.preco,
+    }));
+    const totalResumo = getTotal();
+    // Garante que paymentType nunca será null
+    const paymentTypeToSend = paymentType || 'presencial';
     try {
       const payload = {
         cliente: {
           nome: contactInfo.nome,
           email: contactInfo.email,
         },
-        itens: cart.map((item) => ({
-          id: item.id,
-          nome: item.nome,
-          tipo_midia: item.tipo_midia,
-          quantidade: item.qty,
-          preco_unitario: item.preco,
-        })),
-        total: getTotal(),
+        itens: itemsResumo,
+        total: totalResumo,
         albumId: albumData.dados.id,
         subalbumId: albumData.dados.subalbum_id || null,
+        paymentType: paymentTypeToSend,
       };
 
       const response = await fetch(`${VITE_API_URL}/orcamentos/enviar`, {
@@ -372,15 +401,27 @@ const handleSelectPayment = (type) => {
         throw new Error("Erro ao enviar orçamento");
       }
 
-      // Limpa o carrinho após envio bem sucedido
       setCart([]);
-      alert("Orçamento enviado com sucesso!");
+      setSummaryModalContent({
+        success: true,
+        message: `Orçamento enviado para o e-mail ${contactInfo.email}! Em breve você receberá o retorno do fotógrafo.`,
+        items: itemsResumo,
+        total: totalResumo,
+      });
+      setSummaryModalOpen(true);
+      setPaymentType(null);
+      setPixTimer(0);
     } catch (error) {
-      alert("Erro ao enviar orçamento. Por favor, tente novamente.");
+      setSummaryModalContent({
+        success: false,
+        message: "Erro ao enviar orçamento. Por favor, tente novamente.",
+        items: itemsResumo,
+        total: totalResumo,
+      });
+      setSummaryModalOpen(true);
       console.error("Erro:", error);
     }
   };
-
 const handleShowPix = async () => {
   console.log("clicou");
   setPixLoading(true);
@@ -412,369 +453,492 @@ const handleShowPix = async () => {
   }
 };
 
-  return (
-    <div className="shared-album-page">
-      <Header />
-      <div className="shared-album-content">
-        <main className="shared-album-gallery-area">
-          {/* Disclaimer */}
-          <div className="shared-album-disclaimer">
-            <FaLock className="security-icon" /> Os preços podem variar de
-            acordo com as necessidades do cliente. Aguarde o contato do
-            fotógrafo para saber mais.
-          </div>
-          <h2 className="shared-album-title">
-            {albumData?.tipo === "subalbum" && albumData?.dados?.album_nome
-              ? `${albumData.dados.album_nome} - ${albumData.dados.nome}`
-              : albumData?.dados?.nome || "Álbum"}
-          </h2>
-          {loading ? (
-            <div className="shared-album-loading">
-              <div className="spinner"></div>
-              <p>Carregando álbum...</p>
-            </div>
-          ) : error ? (
-            <div className="shared-album-error">
-              <h2>Oops! Algo deu errado</h2>
-              <p>{error}</p>
-            </div>
-          ) : (
-            <div className="image-grid">
-              {albumData?.fotos?.length > 0 ? (
-                albumData.fotos.map((foto, index) => (
-                  <div
-                    key={`${foto.id}-${index}`}
-                    className="image-card-shared"
-                  >
-                    <div
-                      className="shared-album-img-wrapper"
-                      style={{ position: "relative" }}
-                    >
-                      <div className="image-protection-overlay">
-                        <span className="protection-text">Protegido</span>
-                      </div>
-                      <img
-                        ref={(ref) => registerImageRef(foto.id, ref)}
-                        src={getImageUrl(foto)}
-                        alt={foto.nome || "Imagem do álbum"}
-                        loading="lazy"
-                        className="album-image shared-album-img-hover"
-                        onClick={() => handleOpenModal(foto)}
-                        style={{ cursor: "pointer", userSelect: "none" }}
-                        onContextMenu={preventContextMenu}
-                        draggable="false"
-                        onLoad={(e) =>
-                          securityEnabled &&
-                          contactInfo &&
-                          applyWatermark(e.target)
-                        }
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/300x200?text=Erro+ao+carregar";
-                          e.target.alt = "Erro ao carregar imagem";
-                        }}
-                      />
-                    </div>
-                    <div className="image-info">
-                      <p className="image-name">{foto.nome}</p>
-                      {/* Badge e preço só se tiver fisica ou digital */}
-                      {foto.fisica && foto.digital ? (
-                        <span className="image-badge">Física e Digital</span>
-                      ) : foto.fisica ? (
-                        <span className="image-badge physical">Física</span>
-                      ) : foto.digital ? (
-                        <span className="image-badge digital">Digital</span>
-                      ) : null}
-                      {/* Preço só se o tipo existir e o preço for válido */}
-                      {((foto.fisica &&
-                        !foto.digital &&
-                        !isNaN(Number(foto.preco_fisica)) &&
-                        Number(foto.preco_fisica) > 0) ||
-                        (foto.digital &&
-                          !foto.fisica &&
-                          !isNaN(Number(foto.preco_digital)) &&
-                          Number(foto.preco_digital) > 0)) && (
-                        <span className="image-price">
-                          R${" "}
-                          {Number(
-                            foto.fisica ? foto.preco_fisica : foto.preco_digital
-                          ).toFixed(2)}
-                        </span>
-                      )}
-                      <button
-                        className="shared-album-add-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToCart(foto);
-                        }}
-                      >
-                        Adicionar
-                      </button>
-                    </div>
-                  </div>
-                ))
+    return (
+      <>
+        <div className="shared-album-page">
+          <Header />
+          <div className="shared-album-content">
+            <main className="shared-album-gallery-area">
+              {/* Disclaimer */}
+              <div className="shared-album-disclaimer">
+                <FaLock className="security-icon" /> Os preços podem variar de
+                acordo com as necessidades do cliente. Aguarde o contato do
+                fotógrafo para saber mais.
+              </div>
+              <h2 className="shared-album-title">
+                {albumData?.tipo === "subalbum" && albumData?.dados?.album_nome
+                  ? `${albumData.dados.album_nome} - ${albumData.dados.nome}`
+                  : albumData?.dados?.nome || "Álbum"}
+              </h2>
+              {loading ? (
+                <div className="shared-album-loading">
+                  <div className="spinner"></div>
+                  <p>Carregando álbum...</p>
+                </div>
+              ) : error ? (
+                <div className="shared-album-error">
+                  <h2>Oops! Algo deu errado</h2>
+                  <p>{error}</p>
+                </div>
               ) : (
-                <div className="shared-album-empty">
-                  <p>Não há fotos disponíveis neste álbum.</p>
+                <div className="image-grid">
+                  {albumData?.fotos?.length > 0 ? (
+                    albumData.fotos.map((foto, index) => (
+                      <div
+                        key={`${foto.id}-${index}`}
+                        className="image-card-shared"
+                      >
+                        <div
+                          className="shared-album-img-wrapper"
+                          style={{ position: "relative" }}
+                        >
+                          <div className="image-protection-overlay">
+                            <span className="protection-text">Protegido</span>
+                          </div>
+                          <img
+                            ref={(ref) => registerImageRef(foto.id, ref)}
+                            src={getImageUrl(foto)}
+                            alt={foto.nome || "Imagem do álbum"}
+                            loading="lazy"
+                            className="album-image shared-album-img-hover"
+                            onClick={() => handleOpenModal(foto)}
+                            style={{ cursor: "pointer", userSelect: "none" }}
+                            onContextMenu={preventContextMenu}
+                            draggable="false"
+                            onLoad={(e) =>
+                              securityEnabled &&
+                              contactInfo &&
+                              applyWatermark(e.target)
+                            }
+                            onError={(e) => {
+                              e.target.src =
+                                "https://via.placeholder.com/300x200?text=Erro+ao+carregar";
+                              e.target.alt = "Erro ao carregar imagem";
+                            }}
+                          />
+                        </div>
+                        <div className="image-info">
+                          <p className="image-name">{foto.nome}</p>
+                          {/* Badge e preço só se tiver fisica ou digital */}
+                          {foto.fisica && foto.digital ? (
+                            <span className="image-badge">Física e Digital</span>
+                          ) : foto.fisica ? (
+                            <span className="image-badge physical">Física</span>
+                          ) : foto.digital ? (
+                            <span className="image-badge digital">Digital</span>
+                          ) : null}
+                          {/* Preço só se o tipo existir e o preço for válido */}
+                          {((foto.fisica &&
+                            !foto.digital &&
+                            !isNaN(Number(foto.preco_fisica)) &&
+                            Number(foto.preco_fisica) > 0) ||
+                            (foto.digital &&
+                              !foto.fisica &&
+                              !isNaN(Number(foto.preco_digital)) &&
+                              Number(foto.preco_digital) > 0)) && (
+                            <span className="image-price">
+                              R${" "}
+                              {Number(
+                                foto.fisica ? foto.preco_fisica : foto.preco_digital
+                              ).toFixed(2)}
+                            </span>
+                          )}
+                          <button
+                            className="shared-album-add-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToCart(foto);
+                            }}
+                          >
+                            Adicionar
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="shared-album-empty">
+                      <p>Não há fotos disponíveis neste álbum.</p>
+                    </div>
+                  )}
                 </div>
               )}
+            </main>
+            <aside className="shared-album-cart">
+              <div className="cart-header">
+                <span>Carrinho de fotos</span>
+              </div>
+              <div className="cart-items">
+                {cart.length === 0 ? (
+                  <p className="cart-empty">Seu carrinho está vazio</p>
+                ) : (
+                  cart.map((item) => (
+                    <div
+                      className="cart-item"
+                      key={item.id + "-" + item.tipo_midia}
+                    >
+                      <div className="cart-item-img-col">
+                        <img
+                          src={getImageUrl(item)}
+                          alt={item.nome}
+                          className="cart-item-img"
+                          onContextMenu={preventContextMenu}
+                          draggable="false"
+                        />
+                        {/* Badge só se tiver tipo_midia */}
+                        {item.tipo_midia === "fisica" && (
+                          <span className="image-badge physical">Física</span>
+                        )}
+                        {item.tipo_midia === "digital" && (
+                          <span className="image-badge digital">Digital</span>
+                        )}
+                      </div>
+                      <div className="cart-item-info-col">
+                        <div className="cart-item-header">
+                          <span className="cart-item-name">{item.nome}</span>
+                          {/* Preço só se tiver tipo_midia e for maior que zero */}
+                          {item.tipo_midia &&
+                            !isNaN(Number(item.preco)) &&
+                            Number(item.preco) > 0 && (
+                              <span className="cart-item-price">
+                                R$ {(item.preco * item.qty).toFixed(2)}
+                              </span>
+                            )}
+                        </div>
+                        <div className="cart-item-qty-row">
+                          <div className="cart-item-qty">
+                            <button
+                              onClick={() =>
+                                handleChangeQty(
+                                  item.id,
+                                  item.tipo_midia,
+                                  item.qty - 1
+                                )
+                              }
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.qty}
+                              onChange={(e) =>
+                                handleChangeQty(
+                                  item.id,
+                                  item.tipo_midia,
+                                  parseInt(e.target.value) || 1
+                                )
+                              }
+                            />
+                            <button
+                              onClick={() =>
+                                handleChangeQty(
+                                  item.id,
+                                  item.tipo_midia,
+                                  item.qty + 1
+                                )
+                              }
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        className="cart-item-remove"
+                        onClick={() =>
+                          handleRemoveFromCart(item.id, item.tipo_midia)
+                        }
+                        title="Remover"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="cart-footer">
+                <div className="cart-total">
+                  Total: <b>R$ {getTotal()}</b>
+                </div>
+                <button
+                  className="cart-send-btn"
+                  onClick={handleOpenPaymentModal}
+                  disabled={cart.length === 0}
+                >
+                  Mandar orçamento
+                </button>
+                {paymentType === 'pix' && pixTimer > 0 && (
+                  <div style={{ color: '#e0195a', marginTop: 8, fontSize: 13 }}>
+                    Aguarde {Math.floor(pixTimer / 60)}:{(pixTimer % 60).toString().padStart(2, '0')} para fechar o QR Code Pix.
+                  </div>
+                )}
+                {/* Modal de escolha de pagamento */}
+                <Modal isOpen={paymentModalOpen} onClose={() => setPaymentModalOpen(false)}>
+                  <div style={{ textAlign: 'center', padding: 24 }}>
+                    <h2>Como deseja pagar?</h2>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 24, margin: '24px 0' }}>
+                      <button
+                        className="media-choice-btn"
+                        onClick={() => handleSelectPayment('pix')}
+                        style={{ minWidth: 120 }}
+                      >
+                        Pix
+                      </button>
+                      <button
+                        className="media-choice-btn"
+                        onClick={() => handleSelectPayment('presencial')}
+                        style={{ minWidth: 120 }}
+                      >
+                        Presencial
+                      </button>
+                    </div>
+                    <button className="shared-album-modal-close-btn" onClick={() => setPaymentModalOpen(false)}>
+                      Cancelar
+                    </button>
+                  </div>
+                </Modal>
+              </div>
+            </aside>
+          </div>
+        </div>
+        {/* Modais globais e Footer */}
+        <Modal isOpen={modalOpen} onClose={handleCloseModal}>
+          {modalImage && (
+            <div className="shared-album-modal-wrapper">
+              <img
+                ref={(ref) => registerImageRef(`modal-${modalImage.id}`, ref)}
+                src={getImageUrl(modalImage)}
+                alt={modalImage.nome || "Foto completa"}
+                className="shared-album-modal-img"
+                onContextMenu={preventContextMenu}
+                draggable="false"
+                onLoad={(e) =>
+                  securityEnabled && contactInfo && applyWatermark(e.target)
+                }
+              />
+              <div className="shared-album-modal-caption">{modalImage.nome}</div>
+              <button
+                className="shared-album-modal-close-btn"
+                onClick={handleCloseModal}
+              >
+                Fechar
+              </button>
             </div>
           )}
-        </main>
-        <aside className="shared-album-cart">
-          <div className="cart-header">
-            <span>Carrinho de fotos</span>
-          </div>
-          <div className="cart-items">
-            {cart.length === 0 ? (
-              <p className="cart-empty">Seu carrinho está vazio</p>
-            ) : (
-              cart.map((item) => (
-                <div
-                  className="cart-item"
-                  key={item.id + "-" + item.tipo_midia}
+        </Modal>
+        <Modal
+          isOpen={mediaChoiceModal}
+          onClose={() => {
+            setMediaChoiceModal(false);
+            setMediaChoiceFoto(null);
+          }}
+        >
+          {mediaChoiceFoto && (
+            <div
+              className="media-choice-modal-wrapper"
+              style={{ height: "15rem" }}
+            >
+              <h3>Escolha o tipo de mídia</h3>
+              <div className="media-choice-options">
+                <button
+                  className="media-choice-btn"
+                  onClick={() => handleAddToCart(mediaChoiceFoto, "fisica")}
                 >
-                  <div className="cart-item-img-col">
-                    <img
-                      src={getImageUrl(item)}
-                      alt={item.nome}
-                      className="cart-item-img"
-                      onContextMenu={preventContextMenu}
-                      draggable="false"
-                    />
-                    {/* Badge só se tiver tipo_midia */}
-                    {item.tipo_midia === "fisica" && (
-                      <span className="image-badge physical">Física</span>
-                    )}
-                    {item.tipo_midia === "digital" && (
-                      <span className="image-badge digital">Digital</span>
-                    )}
-                  </div>
-                  <div className="cart-item-info-col">
-                    <div className="cart-item-header">
-                      <span className="cart-item-name">{item.nome}</span>
-                      {/* Preço só se tiver tipo_midia e for maior que zero */}
-                      {item.tipo_midia &&
-                        !isNaN(Number(item.preco)) &&
-                        Number(item.preco) > 0 && (
-                          <span className="cart-item-price">
-                            R$ {(item.preco * item.qty).toFixed(2)}
-                          </span>
-                        )}
-                    </div>
-                    <div className="cart-item-qty-row">
-                      <div className="cart-item-qty">
-                        <button
-                          onClick={() =>
-                            handleChangeQty(
-                              item.id,
-                              item.tipo_midia,
-                              item.qty - 1
-                            )
-                          }
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.qty}
-                          onChange={(e) =>
-                            handleChangeQty(
-                              item.id,
-                              item.tipo_midia,
-                              parseInt(e.target.value) || 1
-                            )
-                          }
-                        />
-                        <button
-                          onClick={() =>
-                            handleChangeQty(
-                              item.id,
-                              item.tipo_midia,
-                              item.qty + 1
-                            )
-                          }
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    className="cart-item-remove"
-                    onClick={() =>
-                      handleRemoveFromCart(item.id, item.tipo_midia)
-                    }
-                    title="Remover"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="cart-footer">
-            <div className="cart-total">
-              Total: <b>R$ {getTotal()}</b>
-            </div>
-            <div className="cart-footer">
-              <div className="cart-total">
-                Total: <b>R$ {getTotal()}</b>
+                  Física <br />
+                  <span className="media-choice-price">
+                    R$ {Number(mediaChoiceFoto.preco_fisica || 0).toFixed(2)}
+                  </span>
+                </button>
+                <button
+                  className="media-choice-btn"
+                  onClick={() => handleAddToCart(mediaChoiceFoto, "digital")}
+                >
+                  Digital <br />
+                  <span className="media-choice-price">
+                    R$ {Number(mediaChoiceFoto.preco_digital || 0).toFixed(2)}
+                  </span>
+                </button>
               </div>
               <button
-                className="cart-send-btn"
-                onClick={handleSendBudget}
-                disabled={cart.length === 0}
+                className="shared-album-modal-close-btn"
+                onClick={() => {
+                  setMediaChoiceModal(false);
+                  setMediaChoiceFoto(null);
+                }}
               >
-                Mandar orçamento
-              </button>
-              <button
-                className="cart-pix-btn"
-                onClick={handleShowPix}
-                disabled={cart.length === 0}
-                style={{ marginTop: 8 }}
-              >
-                Pagar com Pix
+                Cancelar
               </button>
             </div>
-          </div>
-        </aside>
-      </div>
-      {/* Modal de visualização da foto */}
-      <Modal isOpen={modalOpen} onClose={handleCloseModal}>
-        {modalImage && (
-          <div className="shared-album-modal-wrapper">
-            <img
-              ref={(ref) => registerImageRef(`modal-${modalImage.id}`, ref)}
-              src={getImageUrl(modalImage)}
-              alt={modalImage.nome || "Foto completa"}
-              className="shared-album-modal-img"
-              onContextMenu={preventContextMenu}
-              draggable="false"
-              onLoad={(e) =>
-                securityEnabled && contactInfo && applyWatermark(e.target)
-              }
-            />
-            <div className="shared-album-modal-caption">{modalImage.nome}</div>
+          )}
+        </Modal>
+        {/* Modal de contato */}
+        <Modal isOpen={contactModalOpen} onClose={() => {}} disableClose={true}>
+          <form onSubmit={handleConfirmContact} className="contact-modal-wrapper">
+            <h2 className="contact-modal-title">
+              Bem-vindo ao Galeriloop,
+              <br />
+              Por favor informe seus dados de contato
+            </h2>
+            <div className="contact-modal-inputs">
+              <label className="contact-modal-label">Nome:</label>
+              <input
+                type="text"
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                className="contact-modal-input"
+                autoFocus
+              />
+              {contactTouched && contactName.trim().length === 0 && (
+                <span className="contact-modal-error">Preencha o nome</span>
+              )}
+              <label className="contact-modal-label">Email:</label>
+              <input
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                className="contact-modal-input"
+              />
+              {contactTouched && !isValidEmail(contactEmail) && (
+                <span className="contact-modal-error">
+                  Digite um email válido
+                </span>
+              )}
+            </div>
             <button
-              className="shared-album-modal-close-btn"
-              onClick={handleCloseModal}
+              type="submit"
+              className="contact-modal-btn"
+              disabled={!isContactValid}
             >
+              Confirmar
+            </button>
+          </form>
+        </Modal>
+        <Modal isOpen={pixModalOpen} onClose={pixTimer > 0 ? undefined : () => {
+          setPixModalOpen(false);
+          setTimeout(() => {
+            handleSendBudget();
+          }, 300);
+        }}>
+          <div style={{ textAlign: 'center', padding: 32, maxWidth: 420, margin: '0 auto' }}>
+            <h2 style={{ fontSize: 24, fontWeight: 700, color: '#1e3653', marginBottom: 18 }}>Pagamento via Pix</h2>
+            {pixLoading ? (
+              <p>Gerando QR Code...</p>
+            ) : pixError ? (
+              <p style={{ color: 'red' }}>{pixError}</p>
+            ) : pixPayload ? (
+              <>
+                <QRCodeSVG value={pixPayload} size={220} />
+                <p style={{ wordBreak: 'break-all', fontSize: 13, marginTop: 16, marginBottom: 8 }}>
+                  <b>Copia e Cola:</b><br />
+                  <span style={{ userSelect: 'all', fontFamily: 'monospace', fontSize: 14 }}>{pixPayload}</span>
+                </p>
+                <button
+                  style={{ marginBottom: 12, padding: '6px 18px', borderRadius: 6, border: '1px solid #1e3653', background: '#f3f6fa', color: '#1e3653', fontWeight: 600, cursor: 'pointer', fontSize: 15 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(pixPayload);
+                  }}
+                >
+                  Copiar chave Pix
+                </button>
+                {pixTimer > 0 && (
+                  <div style={{ color: '#e0195a', marginTop: 8, fontSize: 13 }}>
+                    Aguarde {Math.floor(pixTimer / 60)}:{(pixTimer % 60).toString().padStart(2, '0')} para fechar esta tela.
+                  </div>
+                )}
+              </>
+            ) : null}
+            <button className="shared-album-modal-close-btn" onClick={() => { if (pixTimer === 0) {
+              setPixModalOpen(false);
+              setTimeout(() => {
+                handleSendBudget();
+              }, 300);
+            }}} disabled={pixTimer > 0} style={{ marginTop: 16 }}>
               Fechar
             </button>
           </div>
-        )}
-      </Modal>
-      <Modal
-        isOpen={mediaChoiceModal}
-        onClose={() => {
-          setMediaChoiceModal(false);
-          setMediaChoiceFoto(null);
-        }}
-      >
-        {mediaChoiceFoto && (
-          <div
-            className="media-choice-modal-wrapper"
-            style={{ height: "15rem" }}
-          >
-            <h3>Escolha o tipo de mídia</h3>
-            <div className="media-choice-options">
-              <button
-                className="media-choice-btn"
-                onClick={() => handleAddToCart(mediaChoiceFoto, "fisica")}
-              >
-                Física <br />
-                <span className="media-choice-price">
-                  R$ {Number(mediaChoiceFoto.preco_fisica || 0).toFixed(2)}
-                </span>
-              </button>
-              <button
-                className="media-choice-btn"
-                onClick={() => handleAddToCart(mediaChoiceFoto, "digital")}
-              >
-                Digital <br />
-                <span className="media-choice-price">
-                  R$ {Number(mediaChoiceFoto.preco_digital || 0).toFixed(2)}
-                </span>
-              </button>
-            </div>
+        </Modal>
+        {/* Modal de resumo do orçamento */}
+      <Modal isOpen={summaryModalOpen} onClose={() => setSummaryModalOpen(false)}>
+        <div
+          style={{
+            padding: '32px 16px',
+            maxWidth: 600,
+            width: '100%',
+            margin: '0 auto',
+            borderRadius: 16,
+            background: '#fff',
+            boxSizing: 'border-box',
+            boxShadow: '0 2px 16px rgba(30,54,83,0.08)',
+            position: 'relative',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <h2 style={{
+              color: summaryModalContent.success ? '#1e3653' : '#e0195a',
+              textAlign: 'center',
+              flex: 1,
+              margin: 0,
+              fontSize: 26,
+              fontWeight: 700,
+              letterSpacing: 0.5,
+            }}>
+              {summaryModalContent.success ? 'Resumo do Orçamento' : 'Erro ao Enviar'}
+            </h2>
             <button
-              className="shared-album-modal-close-btn"
-              onClick={() => {
-                setMediaChoiceModal(false);
-                setMediaChoiceFoto(null);
+              onClick={() => setSummaryModalOpen(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: 26,
+                color: '#888',
+                cursor: 'pointer',
+                marginLeft: 8,
+                lineHeight: 1,
               }}
+              title="Fechar"
             >
-              Cancelar
+              ×
             </button>
           </div>
-        )}
-      </Modal>
-      {/* Modal de contato */}
-      <Modal isOpen={contactModalOpen} onClose={() => {}} disableClose={true}>
-        <form onSubmit={handleConfirmContact} className="contact-modal-wrapper">
-          <h2 className="contact-modal-title">
-            Bem-vindo ao Galeriloop,
-            <br />
-            Por favor informe seus dados de contato
-          </h2>
-          <div className="contact-modal-inputs">
-            <label className="contact-modal-label">Nome:</label>
-            <input
-              type="text"
-              value={contactName}
-              onChange={(e) => setContactName(e.target.value)}
-              className="contact-modal-input"
-              autoFocus
-            />
-            {contactTouched && contactName.trim().length === 0 && (
-              <span className="contact-modal-error">Preencha o nome</span>
-            )}
-            <label className="contact-modal-label">Email:</label>
-            <input
-              type="email"
-              value={contactEmail}
-              onChange={(e) => setContactEmail(e.target.value)}
-              className="contact-modal-input"
-            />
-            {contactTouched && !isValidEmail(contactEmail) && (
-              <span className="contact-modal-error">
-                Digite um email válido
-              </span>
-            )}
+          <div style={{ marginBottom: 18, color: summaryModalContent.success ? '#1e3653' : '#e0195a', textAlign: 'center', fontSize: 17 }}>
+            {summaryModalContent.message}
           </div>
-          <button
-            type="submit"
-            className="contact-modal-btn"
-            disabled={!isContactValid}
-          >
-            Confirmar
-          </button>
-        </form>
+          <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, marginBottom: 18, background: '#fafbfc', maxHeight: 320, overflowY: 'auto' }}>
+            {summaryModalContent.items.length === 0 ? (
+              <div style={{ color: '#888', textAlign: 'center' }}>Nenhum item no orçamento.</div>
+            ) : (
+              summaryModalContent.items.map((item, idx) => (
+                <div key={item.id + '-' + item.tipo_midia} style={{ display: 'flex', alignItems: 'center', borderBottom: idx < summaryModalContent.items.length - 1 ? '1px solid #eee' : 'none', padding: '10px 0' }}>
+                  <div style={{ width: 60, height: 60, marginRight: 16, flexShrink: 0, borderRadius: 8, overflow: 'hidden', background: '#f3f3f3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img
+                      src={getImageUrl(item)}
+                      alt={item.nome}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: '#1e3653', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.nome}</div>
+                    <div style={{ fontSize: 13, color: '#555' }}>{item.tipo_midia === 'fisica' ? 'Física' : 'Digital'}</div>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#555', margin: '0 12px', minWidth: 48, textAlign: 'center' }}>Qtd: {item.quantidade}</div>
+                  <div style={{ fontWeight: 700, color: '#1e3653', minWidth: 80, textAlign: 'right' }}>R$ {(item.preco_unitario * item.quantidade).toFixed(2)}</div>
+                </div>
+              ))
+            )}
+            <div style={{ textAlign: 'right', marginTop: 14, fontWeight: 700, fontSize: 18, color: '#1e3653' }}>
+              Total: R$ {Number(summaryModalContent.total).toFixed(2)}
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <button className="shared-album-modal-close-btn" onClick={() => setSummaryModalOpen(false)} style={{ marginTop: 8, minWidth: 120 }}>
+              Fechar
+            </button>
+          </div>
+        </div>
       </Modal>
-      <Modal isOpen={pixModalOpen} onClose={() => setPixModalOpen(false)}>
-  <div style={{ textAlign: 'center', padding: 24 }}>
-    <h2>Pagamento via Pix</h2>
-    {pixLoading ? (
-      <p>Gerando QR Code...</p>
-    ) : pixError ? (
-      <p style={{ color: 'red' }}>{pixError}</p>
-    ) : pixPayload ? (
-  <>
-    <QRCodeSVG value={pixPayload} size={220} />
-    <p style={{ wordBreak: 'break-all', fontSize: 12, marginTop: 16 }}>
-      <b>Copia e Cola:</b><br />
-      <span>{pixPayload}</span>
-    </p>
-  </>
-) : null}
-    <button className="shared-album-modal-close-btn" onClick={() => setPixModalOpen(false)}>Fechar</button>
-  </div>
-</Modal>
-      <Footer />
-    </div>
-  );
-};
+        <Footer />
+      </>
+    );
+  };
 
 export default SharedAlbum;
