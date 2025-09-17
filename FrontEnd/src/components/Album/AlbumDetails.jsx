@@ -81,16 +81,25 @@ const AlbumDetails = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
+  // --- Estados ajustados para paginação ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalImagesCount, setTotalImagesCount] = useState(0); // Novo estado para o total de imagens
+  const IMAGES_PER_PAGE = 10;
+  // --- Fim dos estados de paginação ---
+
   const subalbumOptions = subalbuns.map(subalbum => ({
     value: subalbum.id,
     label: subalbum.nome,
   }));
 
-  const GetImages = async () => {
+  // Renomeada e ajustada para a nova lógica de paginação
+  const fetchImages = async (pageToLoad) => { // Removido o parâmetro 'append'
     try {
       setError(null);
+      setLoading(true);
 
-      const response = await fetch(`${VITE_API_URL}/fotos/getAlbumsPhotos?albumId=${id}`, {
+      // Adiciona os parâmetros de paginação (page e limit) à URL
+      const response = await fetch(`${VITE_API_URL}/fotos/getAlbumsPhotos?albumId=${id}&page=${pageToLoad}&limit=${IMAGES_PER_PAGE}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -98,43 +107,55 @@ const AlbumDetails = () => {
       });
 
       if (!response.ok) {
-        // Se o status for 404, pode significar que o álbum está vazio ou não existe
-        if (response.status === 404) {
-          return [];
+        if (response.status === 404) { // Álbum vazio ou não existe
+          setImages([]);
+          setTotalImagesCount(0);
+          return;
         }
         throw new Error(`Erro no servidor: ${response.status}`);
       }
 
-      const data = await response.json();
+      const responseData = await response.json();
+      console.log('Resposta do backend (com paginação):', responseData);
+
+      const fetchedImages = responseData.images || [];
+      const totalAvailableImages = responseData.totalImages || 0;
+
+      setImages(fetchedImages); // Sempre substitui as imagens
+      setTotalImagesCount(totalAvailableImages); // Atualiza o total de imagens
 
       // Verifica se o formato da resposta mudou (devido ao Circuit Breaker fallback)
-      if (data.message && data.images) {
-        console.log('Modo de contingência ativado:', data.message);
-        // Exibir uma notificação para o usuário sobre o modo de contingência
-        setMessage({
-          text: data.message,
-          type: 'warning'
-        });
-        return data.images; // Retorna apenas os metadados
+      if (responseData.message && responseData.images) {
+        console.log('Modo de contingência ativado:', responseData.message);
+        setMessage({ text: responseData.message, type: 'warning' });
       }
 
-      console.log('Imagens recebidas (quantidade):', data.length);
-      return data;
     } catch (error) {
       console.error('Erro ao buscar imagens:', error);
-      throw error;
+      setError('Não foi possível carregar as imagens. Tente novamente mais tarde.');
+      setMessage({ text: 'Erro ao carregar imagens', type: 'error' });
+      setImages([]);
+      setTotalImagesCount(0);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Ajustada para resetar a página e recarregar
   const refreshImages = async () => {
     if (isRefreshing) return;
 
     try {
       setIsRefreshing(true);
       setMessage({ text: 'Atualizando imagens...', type: 'info' });
-
-      const data = await GetImages();
-      setImages(data);
+      
+      // Se a página atual não for 1, definimos para 1. O useEffect fará a chamada.
+      // Se já for 1, chamamos fetchImages(1) diretamente para garantir o refresh.
+      if (currentPage !== 1) {
+        setCurrentPage(1); // Isso vai disparar o useEffect para buscar a página 1
+      } else {
+        await fetchImages(1); // Se já está na página 1, força o recarregamento
+      }
 
       setMessage({ text: 'Imagens atualizadas com sucesso!', type: 'success' });
       setTimeout(() => setMessage({ text: '', type: '' }), 3000);
@@ -146,31 +167,17 @@ const AlbumDetails = () => {
     }
   };
 
+  // Único useEffect para carregar detalhes e imagens. Dispara quando 'id' ou 'currentPage' muda.
   useEffect(() => {
     fetchAlbumDetails();
+    fetchImages(currentPage); // Busca as imagens para a página atual
+  }, [id, currentPage]); // Dependências: id do álbum e página atual
 
-    const fetchImages = async () => {
-      try {
-        setLoading(true);
-        const data = await GetImages();
-        console.log('Dados recebidos:', data);
-        setImages(data);
-        setError(null);
-      } catch (err) {
-        console.error('Erro ao carregar imagens:', err);
-        setError('Não foi possível carregar as imagens. Tente novamente mais tarde.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // O useEffect para currentPage sozinho foi removido, pois a lógica está no acima.
 
-    fetchImages();
-
-  }, [id]);
 
   useEffect(() => {
     if (subalbuns.length > 0) {
-      setSelectedSubalbuns(subalbuns.map(s => s.id));
       const options = subalbuns.map(subalbum => ({
         value: subalbum.id,
         label: subalbum.nome
@@ -190,7 +197,6 @@ const AlbumDetails = () => {
         }
       });
 
-      // Limpar cache de imagens
       imageCache.current.clear();
     };
   }, [images]);
@@ -223,40 +229,34 @@ const AlbumDetails = () => {
   const getImageUrl = (image) => {
     if (!image) return '';
 
-    // Verificar cache primeiro
     const cacheKey = `img_${image.id}`;
     if (imageCache.current.has(cacheKey)) {
       return imageCache.current.get(cacheKey);
     }
 
-    // Verifica se estamos no modo de contingência (sem dados binários)
-    if (!image.dados) {
+    if (!image.dados && typeof image.dados !== 'string') {
       return 'https://via.placeholder.com/300x200?text=Imagem+Indisponível';
     }
 
     try {
-      // Se os dados já estiverem em base64, use diretamente
       if (typeof image.dados === 'string') {
         const url = `data:${image.tipo_mime || 'image/jpeg'};base64,${image.dados}`;
         imageCache.current.set(cacheKey, url);
         return url;
       }
 
-      // Para compatibilidade com o formato anterior
       let dataArray;
       if (Array.isArray(image.dados)) {
         dataArray = image.dados;
-      } else if (typeof image.dados === 'object') {
-        dataArray = Object.values(image.dados);
+      } else if (typeof image.dados === 'object' && image.dados.type === 'Buffer' && Array.isArray(image.dados.data)) {
+        dataArray = image.dados.data;
       } else {
-        console.error('Formato de dados não suportado:', typeof image.dados);
+        console.error('Formato de dados não suportado:', typeof image.dados, image.dados);
         return 'https://via.placeholder.com/300x200?text=Formato+Inválido';
       }
 
-      // Cria um Blob a partir dos dados binários
       const blob = new Blob([new Uint8Array(dataArray)], { type: image.tipo_mime || 'image/jpeg' });
 
-      // Cria uma URL para o Blob
       const url = URL.createObjectURL(blob);
       imageCache.current.set(cacheKey, url);
       return url;
@@ -265,6 +265,7 @@ const AlbumDetails = () => {
       return 'https://via.placeholder.com/300x200?text=Erro+de+Processamento';
     }
   };
+
 
   const handleDeleteAlbum = async () => {
     if (isDeletingAlbum) return;
@@ -286,7 +287,6 @@ const AlbumDetails = () => {
       
       setMessage({ text: 'Álbum excluído com sucesso!', type: 'success' });
       
-      // Redirecionar para a página de álbuns após a exclusão bem-sucedida
       setTimeout(() => {
         navigate('/home');
       }, 1500);
@@ -328,7 +328,7 @@ const AlbumDetails = () => {
       const data = await response.json();
       setMessage({ text: data.message || 'Subálbuns criados com sucesso!', type: 'success' });
       setSubgroupName('');
-      fetchAlbumDetails();
+      fetchAlbumDetails(); // Atualiza a lista de subálbuns
     } catch (error) {
       console.error('Erro:', error);
       setMessage({ text: 'Erro ao criar subálbuns', type: 'error' });
@@ -374,9 +374,9 @@ const AlbumDetails = () => {
       setImage(null);
       setSelectedSubalbuns([]);
       setModalAlbum(false);
+      setPreviewImage(null);
 
-      // Recarregar imagens após o upload
-      refreshImages();
+      refreshImages(); // Recarregar imagens após o upload, voltando para a primeira página
     } catch (error) {
       console.error('Erro:', error);
       setMessage({ text: 'Erro ao enviar a imagem', type: 'error' });
@@ -407,7 +407,6 @@ const AlbumDetails = () => {
     setEditIsFisica(image.fisica || false);
     setEditIsDigital(image.digital || true);
     
-    // Buscar os subálbuns associados a esta imagem
     fetchImageSubalbums(image.id);
     
     setEditModalOpen(true);
@@ -420,7 +419,6 @@ const AlbumDetails = () => {
     setMessage({ text: 'Atualizando imagem...', type: 'info' });
 
     try {
-      // Extrair apenas os IDs dos subálbuns selecionados
       const subalbumIds = selectedImageSubalbuns.map(option => option.value);
       
       const response = await fetch(`${VITE_API_URL}/fotos/updatePhoto`, {
@@ -435,7 +433,7 @@ const AlbumDetails = () => {
           digital: editIsDigital,
           precoDigital: editPrecoDigital,
           precoFisica: editPrecoFisica,
-          subalbumIds: subalbumIds // Adicionar os IDs dos subálbuns para atualização
+          subalbumIds: subalbumIds
         }),
       });
 
@@ -446,7 +444,6 @@ const AlbumDetails = () => {
       setMessage({ text: 'Imagem atualizada com sucesso!', type: 'success' });
       setEditModalOpen(false);
       
-      // Recarregar imagens para mostrar as alterações
       refreshImages();
     } catch (error) {
       console.error('Erro:', error);
@@ -487,7 +484,7 @@ const AlbumDetails = () => {
   };
 
   const handleFavoriteImage= async () => {
-    if (!selectedImage) return; // Nenhuma imagem selecionada
+    if (!selectedImage) return;
   
     setIsLoading(true);
   
@@ -498,7 +495,7 @@ const AlbumDetails = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ imageId: selectedImage.id })  // Supondo que o objeto tenha "id"
+        body: JSON.stringify({ imageId: selectedImage.id })
       });
   
       const result = await response.json();
@@ -508,7 +505,7 @@ const AlbumDetails = () => {
       }
   
       alert('Imagem favoritada com sucesso!');
-      // Aqui você pode atualizar UI/estado se quiser
+      refreshImages();
     } catch (error) {
       alert(error.message);
     } finally {
@@ -531,7 +528,6 @@ const AlbumDetails = () => {
 
       const data = await response.json();
       
-      // Transformar os IDs dos subálbuns em objetos para o Select
       const selectedSubalbumOptions = data.map(subalbumId => ({
         value: subalbumId,
         label: subalbuns.find(s => s.id === subalbumId)?.nome || `Subálbum ${subalbumId}`
@@ -549,7 +545,6 @@ const AlbumDetails = () => {
     setMessage({ text: 'Processando links de acesso...', type: 'info' });
 
     try {
-      // Gerar link para o álbum principal
       const albumResponse = await fetch(`${VITE_API_URL}/album/generateShareLink`, {
         method: 'POST',
         headers: {
@@ -567,14 +562,12 @@ const AlbumDetails = () => {
       }
 
       const albumData = await albumResponse.json();
-      // Adicione um indicador para mostrar se é um link novo ou existente
       setAlbumLink({
         url: albumData.shareLink,
         isNew: albumData.message.includes('Novo'),
         expiresAt: albumData.expiresAt
       });
 
-      // Gerar links para cada subálbum
       if (subalbuns.length > 0) {
         const subalbumLinksArray = [];
 
@@ -623,10 +616,8 @@ const AlbumDetails = () => {
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text)
       .then(() => {
-        // Atualiza o estado para mostrar que foi copiado
         setLinksCopied(prev => ({ ...prev, [id]: true }));
 
-        // Reseta o estado após 2 segundos
         setTimeout(() => {
           setLinksCopied(prev => ({ ...prev, [id]: false }));
         }, 2000);
@@ -645,6 +636,9 @@ const AlbumDetails = () => {
   const filteredImages = images.filter(image =>
     image.nome && image.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Calcula o número total de páginas
+  const totalPages = Math.ceil(totalImagesCount / IMAGES_PER_PAGE);
 
   return (
     <>
@@ -688,16 +682,15 @@ const AlbumDetails = () => {
       )}
 
       <div className="AlbumDetailsContainer">
-        {loading ? (
+        {loading && images.length === 0 && totalImagesCount === 0 ? (
           <div className="loading-indicator">Carregando imagens...</div>
         ) : error ? (
           <div className="error-message">{error}</div>
-        ) : images.length === 0 ? (
+        ) : images.length === 0 && !loading ? (
           <div className="empty-message">Não há imagens neste álbum</div>
         ) : (
           <div className="image-grid">
             {filteredImages.map((image, index) => {
-              // Verifica se estamos no modo de contingência (sem dados binários)
               if (!image.dados && typeof image.dados !== 'string') {
                 return <UnavailableImageCard key={`${image.id}-${index}`} image={image} />;
               }
@@ -730,8 +723,36 @@ const AlbumDetails = () => {
             })}
           </div>
         )}
+        
+        {/* Controles de Paginação */}
+        {totalImagesCount > 0 && totalPages > 1 && (
+          <div className="pagination-controls">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1 || loading}
+              className="pagination-button"
+            >
+              Anterior
+            </button>
+            <span>
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages || loading}
+              className="pagination-button"
+            >
+              Próxima
+            </button>
+          </div>
+        )}
+        {loading && images.length > 0 && (
+          <div className="loading-indicator">Carregando imagens da página {currentPage}...</div>
+        )}
       </div>
 
+      {/* ... (restante do seu código de modais e footer permanece o mesmo) ... */}
+      
       {/* Modal de adicionar subalbum */}
       <Modal isOpen={ModalSubAlbum} onClose={() => setModalSubAlbum(false)}>
         <div className="ModalSubAlbumContainer">
@@ -843,7 +864,6 @@ const AlbumDetails = () => {
                     Mídia Digital
                   </label>
 
-                  {/* Campo de preço que aparece quando Mídia Digital é selecionada */}
                   {isDigital && (
                     <div className="MediaPriceField">
                       <label htmlFor="preco-digital">Preço Digital:</label>
@@ -872,7 +892,6 @@ const AlbumDetails = () => {
                     Mídia Física
                   </label>
 
-                  {/* Campo de preço que aparece quando Mídia Física é selecionada */}
                   {isFisica && (
                     <div className="MediaPriceField">
                       <label htmlFor="preco-fisica">Preço Físico:</label>
@@ -987,7 +1006,6 @@ const AlbumDetails = () => {
                   </div>
                 </div>
                 
-                {/* Adicionar esta seção de seleção de subálbuns */}
                 <div className="SubalbunsSelectionContainer">
                   <label className="SubalbunsSelectionLabel">Subálbuns associados:</label>
                   <Select
@@ -1012,7 +1030,7 @@ const AlbumDetails = () => {
                     type="button"
                     className="ModalFormButton ModalFormButtonSubmit"
                     onClick={handleFavoriteImage}
-                    disabled={isLoading || !selectedImage} // Desabilita se estiver carregando ou sem imagem selecionada
+                    disabled={isLoading || !selectedImage}
                   >
                     Favoritar Imagem
                   </button>

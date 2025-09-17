@@ -20,8 +20,8 @@ const breakerOptions = {
 };
 
 // Criar uma função adaptadora para o Circuit Breaker
-async function getAlbumPhotosAdapter(pool, adminId, albumId, decryptFunction, jwtSecret) {
-  return await getAlbumPhotos(pool, adminId, albumId, decryptFunction, jwtSecret);
+async function getAlbumPhotosAdapter(pool, adminId, albumId, decryptFunction, jwtSecret, limit, offset) {
+  return await getAlbumPhotos(pool, adminId, albumId, decryptFunction, jwtSecret, limit, offset);
 }
 
 async function uploadImage(req, originalname, buffer, mimetype, albumId, subalbumIds, fisica, digital, precoDigital, precoFisica) {
@@ -136,7 +136,13 @@ router.post('/upload', verificarToken, upload.single('image'), async (req, res) 
 router.get('/getAlbumsPhotos', verificarToken, async (req, res) => {
   const adminId = req.usuario.id;
   const { albumId } = req.query;
+  const page = parseInt(req.query.page || '1', 10); // Página padrão: 1
+  const limit = parseInt(req.query.limit || '10', 10); // Limite padrão: 10 fotos
+  const offset = (page - 1) * limit; // Calcular o offset
 
+
+
+  
   // Verificação para garantir que albumId foi fornecido
   if (!albumId) {
     return res.status(400).send('O parâmetro albumId é obrigatório');
@@ -144,22 +150,26 @@ router.get('/getAlbumsPhotos', verificarToken, async (req, res) => {
 
   try {
     // Usar o Circuit Breaker para executar a função
+    // Passando 'limit' e 'offset' para o breaker
     const result = await albumPhotosBreaker.fire(
       req.pool, 
       adminId, 
       albumId, 
       decryptId, 
-      process.env.JWT_SECRET
+      process.env.JWT_SECRET,
+      limit, // Novo parâmetro
+      offset // Novo parâmetro
     );
     
-    // Retornar o resultado
+    // O Circuit Breaker pode retornar um fallback string ou o objeto { images, totalImages }
     if (typeof result.data === 'string') {
       return res.status(result.status).send(result.data);
     } else {
+      // Se for um objeto, esperamos { images: [], totalImages: N }
       return res.status(result.status).json(result.data);
     }
   } catch (err) {
-    console.error('Erro ao processar requisição:', err);
+    console.error('Erro ao processar requisição de fotos com paginação:', err);
     return res.status(500).send('Erro interno do servidor: ' + (err.message || 'Erro desconhecido'));
   }
 });
@@ -273,6 +283,7 @@ router.get('/shared/:token', async (req, res) => {
     }
     
     // Usar a função de utilidade para obter e processar as fotos
+    // A função `getFotosCompartilhamento` não precisa de paginação, então não passamos limit/offset
     const result = await imageUtils.getFotosCompartilhamento(
       req.pool, 
       link.alvo_id, 
