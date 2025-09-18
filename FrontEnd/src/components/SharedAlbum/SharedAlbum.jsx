@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+// Caminho público para o PDF do boleto
+const boletoPDF = "/assets/Documents/Boleto_Galeriloop.pdf";
 import { useParams } from "react-router-dom";
 import Header from "../templates/Header";
 import Footer from "../templates/Footer";
@@ -36,7 +38,8 @@ const SharedAlbum = () => {
   const [securityEnabled, setSecurityEnabled] = useState(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [sendingBudget, setSendingBudget] = useState(false);
-  const [paymentType, setPaymentType] = useState(null); // 'pix' ou 'presencial'
+  // const [paymentType, setPaymentType] = useState(null); // linha removida, duplicada abaixo
+  const [paymentType, setPaymentType] = useState(null); // 'pix', 'presencial' ou 'boleto'
   const [pixTimer, setPixTimer] = useState(0); // segundos restantes para liberar orçamento
   const imageRefs = useRef({});
   const isValidEmail = (email) => /.+@.+\..+/.test(email);
@@ -402,6 +405,13 @@ const handleSelectPayment = async (type) => {
   if (type === 'pix') {
     await handleShowPix();
     setPixTimer(10);
+  } else if (type === 'boleto') {
+    window.open(boletoPDF, '_blank');
+    setPixTimer(0);
+    setSendingBudget(true);
+    setTimeout(() => {
+      handleSendBudget();
+    }, 300);
   } else {
     setPixTimer(0);
     setSendingBudget(true); // <-- Ativa loading para presencial
@@ -701,6 +711,12 @@ const handleSelectPayment = async (type) => {
                       onClick={() => handleSelectPayment('pix')}
                     >
                       Pix
+                    </button>
+                    <button
+                      className="media-choice-btn payment-modal-btn"
+                      onClick={() => handleSelectPayment('boleto')}
+                    >
+                      Boleto
                     </button>
                     <button
                       className="media-choice-btn payment-modal-btn"
