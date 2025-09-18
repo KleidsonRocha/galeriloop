@@ -24,7 +24,13 @@ console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
 
 // Configuração CORS com opções específicas
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8081', 'https://clayforgestudio.com.br'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:8081',
+    'https://clayforgestudio.com.br',
+    'https://www.clayforgestudio.com.br' 
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true // Habilita o envio de cookies em requisições cross-origin
