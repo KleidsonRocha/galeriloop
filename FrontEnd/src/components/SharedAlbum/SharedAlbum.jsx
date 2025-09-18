@@ -144,7 +144,7 @@ const SharedAlbum = () => {
     // Desabilitar o DevTools
     const disableDevTools = () => {
       if (window.devtools && window.devtools.isOpen) {
-        window.location.href = "about:blank";
+        window.open("about:blank", "_self");
       }
     };
 

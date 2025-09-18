@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { MdStar, MdStarBorder, MdStarHalf } from "react-icons/md";
 import { AiOutlineLeft, AiOutlineRight } from "react-icons/ai";
 import { IoMdHelp } from "react-icons/io";
@@ -11,6 +11,7 @@ import './Home.css';
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 const Home = () => {
+  const navigate = useNavigate();
   const [ModalAlbum, setModalAlbum] = useState(false);
   const [ModalHelp, setModalHelp] = useState(false);
   const [ModalConclusion, setModalConclusion] = useState(false);
@@ -280,7 +281,7 @@ const Home = () => {
   };
 
   const handleCardClick = (albumId) => {
-    window.location.href = `/album/${albumId}`;
+    navigate(`/album/${albumId}`);
   };
 
   const getPositionClass = (position) => {

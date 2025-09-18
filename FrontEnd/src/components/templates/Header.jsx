@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ContactModal from './ContactModal';
 import logo from '../../assets/logo.svg';
 import { IoPersonSharp } from "react-icons/io5";
@@ -31,6 +32,7 @@ export const isAuthenticated = async () => {
 };
 
 const Header = () => {
+  const navigate = useNavigate();
   const [isAuth, setIsAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -47,13 +49,13 @@ const Header = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    window.location.href = '/login';
+    navigate('/login');
   };
 
   return (
     <header className="header">
       <div className="header-title">
-        <img src={logo} alt="Galeriloop Logo" className="logo-image" onClick={() => window.location.href = "/home"} />
+  <img src={logo} alt="Galeriloop Logo" className="logo-image" onClick={() => navigate("/home")} />
       </div>
       {isAuth && (
         <div className="header-content">
@@ -62,8 +64,8 @@ const Header = () => {
           </div>
           {profileMenuOpen && (
             <div className="profile-menu">
-              <button onClick={() => window.location.href = "/home"}>Home</button>
-              <button onClick={() => window.location.href = "/settings"}>Configurações</button>
+              <button onClick={() => navigate("/home")}>Home</button>
+              <button onClick={() => navigate("/settings")}>Configurações</button>
               <button onClick={handleLogout}>Sair</button>
             </div>
           )}
