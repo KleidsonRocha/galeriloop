@@ -22,32 +22,15 @@ console.log("JWT_SECRET:", process.env.JWT_SECRET);
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
 
-// Lista de origens permitidas
-const whitelist = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:8081',
-  'https://clayforgestudio.com.br',
-  'https://www.clayforgestudio.com.br' 
-];
-
-// Configuração CORS com uma função para a origem para depuração
+// Configuração CORS com opções específicas
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Permite requisições sem 'origin' (como de Postman, curl ou alguns dispositivos móveis)
-    if (!origin) {
-      console.log(`[CORS DEBUG] Requisição sem Origin (permitida): ${origin}`);
-      return callback(null, true);
-    }
-    // Verifica se a origem está na whitelist
-    if (whitelist.indexOf(origin) !== -1) {
-      console.log(`[CORS DEBUG] Origin Permitida: ${origin}`);
-      callback(null, true);
-    } else {
-      console.error(`[CORS ERROR] Origin Bloqueada: ${origin}`);
-      callback(new Error('Não permitido pela política CORS'));
-    }
-  },
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:8081',
+    'https://clayforgestudio.com.br',
+    'https://www.clayforgestudio.com.br' 
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true // Habilita o envio de cookies em requisições cross-origin
@@ -55,30 +38,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
-
-// --- INÍCIO DO NOVO MIDDLEWARE DE LOG (PARA CONFIRMAR OS HEADERS DE SAÍDA) ---
-app.use((req, res, next) => {
-  // Apenas para rotas /orcamentos/enviar para focar na depuração
-  if (req.originalUrl.startsWith('/orcamentos/enviar')) {
-    const originalJson = res.json;
-    res.json = function(...args) {
-        console.log(`[CORS DEBUG - Express Response - Orçamentos] URL: ${req.originalUrl}`);
-        console.log(`[CORS DEBUG - Express Response - Orçamentos] Origem da Requisição: ${req.headers.origin}`);
-        console.log(`[CORS DEBUG - Express Response - Orçamentos] Cabeçalhos de Resposta ANTES de enviar JSON:`, res.getHeaders());
-        originalJson.apply(res, args);
-    };
-    const originalSend = res.send; // Também intercepta .send() caso seja usado
-    res.send = function(...args) {
-         console.log(`[CORS DEBUG - Express Response - Orçamentos] URL: ${req.originalUrl}`);
-         console.log(`[CORS DEBUG - Express Response - Orçamentos] Origem da Requisição: ${req.headers.origin}`);
-         console.log(`[CORS DEBUG - Express Response - Orçamentos] Cabeçalhos de Resposta ANTES de enviar (não JSON):`, res.getHeaders());
-        originalSend.apply(res, args);
-    };
-  }
-  next();
-});
-// --- FIM DO NOVO MIDDLEWARE DE LOG ---
-
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
